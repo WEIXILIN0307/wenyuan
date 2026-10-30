@@ -1,0 +1,22 @@
+name: tests
+on: [push, pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: bash scripts/setup.sh
+      - run: backend/.venv/bin/ruff check backend/wenyuan backend/tests scripts
+      - run: cd backend && PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest -p asyncio -q
+      - run: cd frontend && pnpm typecheck && pnpm test && pnpm build
+      - run: cd frontend && pnpm exec playwright install --with-deps chromium && pnpm test:e2e

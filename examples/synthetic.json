@@ -1,0 +1,322 @@
+{
+  "schema_version": 1,
+  "title": "开源合成演示",
+  "content": {
+    "type": "doc",
+    "content": [
+      {
+        "type": "heading",
+        "attrs": {
+          "id": "ab0c320543574938b80b71798f68652e",
+          "level": 1
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "社区阅读活动（合成演示）"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "id": "e864150267be42e7a0f4b3e8edff4eb2"
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "以下为专为开源测试编写的虚构资料，不对应真实活动或机构。"
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "id": "a5c1b0d80a4343248c2276020ca65b2b",
+          "level": 2
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "活动安排"
+          }
+        ]
+      },
+      {
+        "type": "bullet_list",
+        "attrs": {
+          "id": "eca6e8ba65a14f45901afb55856fb5fe"
+        },
+        "content": [
+          {
+            "type": "list_item",
+            "attrs": {
+              "id": "dc5dfa4f30b6482891af14e316f6adac"
+            },
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "id": "32e3e16dc38f4147a7c0c250a00b8953"
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "地点：合成社区图书室"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "list_item",
+            "attrs": {
+              "id": "2b84bc86b3d34d2d89b598f0c436d88c"
+            },
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "id": "edfd45510f0040798fc3e283413460d5"
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "内容：读书交流、图书整理"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "list_item",
+            "attrs": {
+              "id": "84f19a91b39b4c1fbfb7a13da61d14a8"
+            },
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "id": "94d127cde4ad4383921ae15602d0cb78"
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "经费：演示方案不安排预算，不作为真实财务数据"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "id": "bdab3de4c7e6430caf8f7f17817a04ad",
+          "level": 2
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "工作分工"
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "attrs": {
+          "id": "483576774e2346db8ea1fef33df00f6e"
+        },
+        "content": [
+          {
+            "type": "table_row",
+            "attrs": {
+              "id": "7a4c99215ab84e65b3682bcd0c9d2ac1"
+            },
+            "content": [
+              {
+                "type": "table_header",
+                "attrs": {
+                  "id": "3896bac1e81642aa9d8b78c78dd05ccf"
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "id": "f30dbae7c72240a1bea74830460f13e4"
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "角色"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "table_header",
+                "attrs": {
+                  "id": "ec9a5923738043fea6a985963ae79816"
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "id": "e80f4b9aa0924263a9e48c7bf8b2379b"
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "任务"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "table_row",
+            "attrs": {
+              "id": "81ba7c5bbd0e4888adac493926f85baf"
+            },
+            "content": [
+              {
+                "type": "table_cell",
+                "attrs": {
+                  "id": "f90a9c2962b74e0fa60aa93aefe796e4"
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "id": "39283367c24842ee872db06217d285b6"
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "演示主持人"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "table_cell",
+                "attrs": {
+                  "id": "6fd32017d232441db50fe806591e4cb0"
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "id": "b93a5a9c93b84acbb2ab4e809be31288"
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "引导交流"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "table_row",
+            "attrs": {
+              "id": "dd5dab61001f48019c28ac78c0d96135"
+            },
+            "content": [
+              {
+                "type": "table_cell",
+                "attrs": {
+                  "id": "5673cfc5797f4eeb83494358a6546dea"
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "id": "f2c2cb6e58ee4ac49b3c510521d12eb5"
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "演示志愿者"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "table_cell",
+                "attrs": {
+                  "id": "ab4ac136cda244a0843ef1998f25483a"
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "id": "bb0279b40f74439d9add139013add193"
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "整理图书"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "id": "1ec8a26d822143529a34bf4cfa6cff2f"
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "请根据实际情况补充时间、联系人和审批信息，不要将占位内容当成事实。"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "id": "d95fcbcd28084b4e85fd96950451e20d"
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "合成图片："
+          },
+          {
+            "type": "image",
+            "attrs": {
+              "id": "c1dcdbc66c6540eea6016721932bec66",
+              "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAA8CAIAAAAiz+n/AAAAoUlEQVR4nO3QQRHAIADAMEDYdGAG71Ox8liioNf5nD343rod8BdGR4yOGB0xOmJ0xOiI0RGjI0ZHjI4YHTE6YnTE6IjREaMjRkeMjhgdMTpidMToiNERoyNGR4yOGB0xOmJ0xOiI0RGjI0ZHjI4YHTE6YnTE6IjREaMjRkeMjhgdMTpidMToiNERoyNGR4yOGB0xOmJ0xOiI0RGjI0ZHjI68EQEBi9ShSEUAAAAASUVORK5CYII=",
+              "alt": "程序绘制的纯色合成图",
+              "width": 120,
+              "height": 60
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "layout": {
+    "width": 794,
+    "height": 1123,
+    "margin": 76,
+    "font": "serif",
+    "font_size": 16,
+    "line_height": 1.7
+  }
+}

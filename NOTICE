@@ -1,0 +1,10 @@
+Wenyuan / 文渊
+
+This repository contains newly written application code and synthetic examples.
+It uses third-party open-source foundations, including ProseMirror, React,
+Next.js, FastAPI, and the dependencies identified in THIRD_PARTY_NOTICES.md.
+Their copyright and license notices are retained in third_party/LICENSES.txt.
+
+No source code, templates, fonts, Office engine distribution, private data, or
+Git history has been migrated from official_doc_AIWriter. Its design was reviewed
+as described in docs/AUDIT.md; no relicensing of that repository is asserted.
