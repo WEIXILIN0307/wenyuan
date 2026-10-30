@@ -14,7 +14,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
 
-from .ai import Generate, Provider, generate, prepare, retrieve, split_source, validate_provider_url
+from .ai import Generate, Provider, generate, prepare, validate_provider_url
+from .search import retrieve, split_source
 from .core import Conflict, Transaction, canonical, digest, plain, uid
 from .store import Store
 
@@ -210,7 +211,7 @@ def create_app(directory: Path | None = None):
         )
         doc = store.create(
             user,
-            name.rsplit(".", 1)[0][:200],
+            result.get("title") or name.rsplit(".", 1)[0][:200],
             result["content"],
             result["layout"],
             original=(name, data, result["warnings"]),

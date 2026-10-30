@@ -86,6 +86,28 @@ def test_bounded_worker_roundtrip_and_native_json():
         import_file("invalid.json", b'{"schema_version":999}')
 
 
+def test_native_json_retains_title_and_image_upload_retains_dimensions(client):
+    import json
+
+    document = fixture_doc()
+    payload = {
+        "schema_version": 1,
+        "title": "原生标题保留",
+        "content": document,
+        "layout": Layout().model_dump(),
+    }
+    response = client.post(
+        "/documents/import", files={"file": ("different-name.json", json.dumps(payload).encode())}
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["document"]["title"] == "原生标题保留"
+    image = io.BytesIO()
+    Image.new("RGB", (120, 60), "green").save(image, "PNG")
+    result = client.post("/images", files={"file": ("synthetic.png", image.getvalue())})
+    assert result.status_code == 200, result.text
+    assert (result.json()["width"], result.json()["height"]) == (120, 60)
+
+
 def test_markdown_supported_subset_roundtrip():
     data = "# 合成标题\n\n中文 **重点** 和 *斜体* [链接](https://example.org)\n\n3. 第一项\n4. 第二项\n\n| 名称 | 数量 |\n| --- | --- |\n| 合成 | 2 |\n".encode()
     imported = import_markdown(data)
@@ -160,8 +182,12 @@ def test_source_index_read_permissions_and_deletion(client, store, document):
     )
     assert response.status_code == 201, response.text
     source_id = response.json()["id"]
+    with store.connect() as db:
+        assert db.execute("SELECT count(*) FROM chunks_fts").fetchone()[0] == response.json()["chunks"]
     matches = client.get(path + "/search?q=阅读活动").json()
     assert matches and matches[0]["source_id"] == source_id and matches[0]["version"]
     assert client.get(path + f"/sources/{source_id}").json()["chunks"][0]["text"].startswith("合成")
     assert client.delete(path + f"/sources/{source_id}").status_code == 200
     assert client.get(path + "/search?q=阅读活动").json() == []
+    with store.connect() as db:
+        assert db.execute("SELECT count(*) FROM chunks_fts").fetchone()[0] == 0

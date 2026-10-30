@@ -767,5 +767,8 @@ def import_file(name, data):
             raise ValueError("不支持的 JSON schema_version")
         validate_document(envelope["content"])
         layout = Layout.model_validate(envelope["layout"]).model_dump()
-        return {"content": envelope["content"], "layout": layout, "warnings": []}
+        title = envelope.get("title", "导入文章")
+        if not isinstance(title, str) or not 1 <= len(title.strip()) <= 200:
+            raise ValueError("原生 JSON 标题无效")
+        return {"content": envelope["content"], "layout": layout, "warnings": [], "title": title.strip()}
     raise ValueError("仅支持 UTF-8 txt/md、原生 JSON 与 DOCX；不解析宏、PDF、HTML 或旧 DOC")

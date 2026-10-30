@@ -252,6 +252,8 @@ def _validate_document(root: dict) -> dict:
                 if not isinstance(ma.get("size", 16), (int, float)) or not 8 <= ma.get("size", 16) <= 96:
                     raise ValueError("文字字号无效")
         children = n.get("content", [])
+        if t == "list_item" and children and children[0].get("type") not in {"paragraph", "heading"}:
+            raise ValueError("列表项必须以正文或标题段落开始")
         if not isinstance(children, list) or any(c.get("type") not in CHILDREN[t] for c in children):
             raise ValueError("节点嵌套不符合 schema")
         if (

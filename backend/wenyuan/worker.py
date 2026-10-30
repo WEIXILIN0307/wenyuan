@@ -1,9 +1,11 @@
 """Resource-limited format worker, communicates JSON via private stdin/stdout."""
 
 import base64
+import io
 import json
 import resource
 import sys
+from PIL import Image
 
 from .formats import export_docx, export_markdown, import_file, png_or_jpeg
 
@@ -17,7 +19,13 @@ def main():
         if action == "image":
             data = base64.b64decode(request["data"], validate=True)
             fmt = png_or_jpeg(data)
-            result = {"src": f"data:image/{fmt};base64," + base64.b64encode(data).decode()}
+            with Image.open(io.BytesIO(data)) as image:
+                width, height = image.size
+            result = {
+                "src": f"data:image/{fmt};base64," + base64.b64encode(data).decode(),
+                "width": width,
+                "height": height,
+            }
         elif action == "import":
             result = import_file(request["name"], base64.b64decode(request["data"], validate=True))
         else:

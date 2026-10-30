@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import re
 from urllib.parse import urlsplit
 
 import httpx
@@ -14,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .core import canonical, digest, plain, uid, utf16_slice, walk
 from .formats import import_markdown
 from .store import now
+from .search import retrieve
 
 
 class Provider(BaseModel):
@@ -65,33 +65,6 @@ class ModelOutput(BaseModel):
     text: str = Field(min_length=1, max_length=100000)
     citations: list[Citation] = Field(max_length=20)
     limitations: list[str] = Field(max_length=20)
-
-
-def terms(query):
-    # Literal retrieval tokenization, never intent or document-type classification.
-    words = re.findall(r"[a-zA-Z0-9_]{2,}|[\u3400-\u9fff]", query.lower())
-    return set(words) | {a + b for a, b in zip(words, words[1:]) if len(a) == len(b) == 1}
-
-
-def retrieve(store, owner, document_id, query, limit=6):
-    store.get(owner, document_id)
-    query_terms = terms(query)
-    with store.connect() as db:
-        rows = db.execute(
-            """SELECT c.*,s.name,s.version,s.id AS source_id FROM chunks c
-                            JOIN sources s ON c.source_id=s.id WHERE s.document_id=?""",
-            (document_id,),
-        ).fetchall()
-    matches = []
-    for row in rows:
-        found = query_terms & terms(row["text"])
-        if found:
-            matches.append({**dict(row), "score": len(found) / max(1, len(query_terms))})
-    return sorted(matches, key=lambda r: (-r["score"], r["source_id"], r["ordinal"]))[:limit]
-
-
-def split_source(text):
-    return [text[i : i + 900] for i in range(0, len(text), 800) if text[i : i + 900].strip()]
 
 
 async def call_model(provider, messages, transport=None):

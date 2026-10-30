@@ -13,6 +13,7 @@ from pathlib import Path
 from cryptography.fernet import Fernet
 
 from .core import Conflict, Layout, Transaction, apply_operations, blank, canonical, digest, uid
+from .search import index_text
 
 
 def now():
@@ -52,6 +53,19 @@ class Store:
               CREATE TABLE IF NOT EXISTS chunks (
                 id TEXT PRIMARY KEY, source_id TEXT REFERENCES sources(id) ON DELETE CASCADE,
                 ordinal INTEGER NOT NULL, text TEXT NOT NULL);
+              CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(chunk_id UNINDEXED,terms);
+              CREATE TRIGGER IF NOT EXISTS chunks_fts_insert AFTER INSERT ON chunks BEGIN
+                INSERT INTO chunks_fts(chunk_id,terms) VALUES (new.id,wenyuan_terms(new.text));
+              END;
+              CREATE TRIGGER IF NOT EXISTS chunks_fts_delete AFTER DELETE ON chunks BEGIN
+                DELETE FROM chunks_fts WHERE chunk_id=old.id;
+              END;
+              CREATE TRIGGER IF NOT EXISTS chunks_fts_update AFTER UPDATE ON chunks BEGIN
+                DELETE FROM chunks_fts WHERE chunk_id=old.id;
+                INSERT INTO chunks_fts(chunk_id,terms) VALUES (new.id,wenyuan_terms(new.text));
+              END;
+              INSERT INTO chunks_fts(chunk_id,terms) SELECT id,wenyuan_terms(text) FROM chunks
+                WHERE id NOT IN (SELECT chunk_id FROM chunks_fts);
               CREATE TABLE IF NOT EXISTS providers (
                 owner TEXT PRIMARY KEY REFERENCES users(id), body TEXT NOT NULL, encrypted_key TEXT NOT NULL);
               CREATE TABLE IF NOT EXISTS proposals (
@@ -67,6 +81,7 @@ class Store:
     def connect(self, write=False):
         db = sqlite3.connect(self.path, timeout=5)
         db.row_factory = sqlite3.Row
+        db.create_function("wenyuan_terms", 1, index_text, deterministic=True)
         db.execute("PRAGMA foreign_keys=ON")
         try:
             if write:
