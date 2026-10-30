@@ -15,7 +15,7 @@ pnpm exec prettier --write app components lib tests '*.ts' '*.json'
 ```
 
 后端/前端单测、浏览器、真实模型及 Office 人工检查分别记录；跳过或未运行必须直说。
-CI 文件已提供，但本次尚未在远程托管平台运行；本地结果见 VALIDATION。
+CI 已在 GitHub Actions 首次完整通过；代码基线、运行链接及本地分项结果见 VALIDATION。
 
 提交贡献意味着你有权贡献相应内容并同意按本项目许可发布；这不替代对旧项目或
 第三方内容的授权确认。新功能保持单机可运行，优先简单的纯函数与明确依赖。
