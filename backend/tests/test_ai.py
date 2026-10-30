@@ -214,3 +214,20 @@ async def test_unconfigured_model_is_clear_failure(store, document):
     await generate(store, "alice", identifier)
     state, body = proposal_body(store, identifier)
     assert state == "failed" and "尚未配置" in body["error"]
+
+
+@pytest.mark.parametrize("thinking", [None, False])
+async def test_provider_thinking_extension_is_explicit_and_optional(store, document, provider, thinking):
+    store.save_provider("alice", {**provider, "thinking": thinking})
+
+    def respond(request):
+        payload = json.loads(request.content)
+        if thinking is None:
+            assert "chat_template_kwargs" not in payload
+        else:
+            assert payload["chat_template_kwargs"] == {"thinking": False, "enable_thinking": False}
+        return completion()
+
+    identifier = prepare(store, "alice", document["id"], request_for(document))
+    await generate(store, "alice", identifier, httpx.MockTransport(respond))
+    assert proposal_body(store, identifier)[0] == "ready"

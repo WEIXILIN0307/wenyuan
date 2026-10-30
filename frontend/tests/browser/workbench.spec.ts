@@ -128,6 +128,48 @@ test("paste text, simple table, image, sources and actual unavailable-model mess
   await page.getByRole("button", { name: "表格", exact: true }).click();
   await saved(page);
   await expect(page.locator(".ProseMirror table")).toHaveCount(1);
+  const cells = [
+    "项目",
+    "方式",
+    "说明",
+    "阅读",
+    "现场",
+    "合成",
+    "交流",
+    "分享",
+    "样例",
+  ];
+  for (let i = 0; i < cells.length; i++) {
+    await page.keyboard.insertText(cells[i]);
+    if (i < cells.length - 1) await page.keyboard.press("Tab");
+  }
+  await saved(page);
+  await expect(page.locator(".ProseMirror th, .ProseMirror td")).toHaveText(
+    cells,
+  );
+  const original = await page.locator(".ProseMirror").innerText();
+  const exportResult = await page.request.get(`/api/documents`);
+  const doc = (await exportResult.json())[0];
+  const exported = await page.request.get(
+    `/api/documents/${doc.id}/export/docx?revision=${doc.revision}`,
+  );
+  const result = await exported.json();
+  expect(result.verified).toBe(true);
+  const imported = await page.request.post("/api/documents/import", {
+    multipart: {
+      file: {
+        name: "table-readback.docx",
+        mimeType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        buffer: Buffer.from(result.data, "base64"),
+      },
+    },
+  });
+  expect(imported.ok()).toBe(true);
+  expect(JSON.stringify((await imported.json()).document.content)).toContain(
+    "项目",
+  );
+  expect(await page.locator(".ProseMirror").innerText()).toBe(original);
   await page.getByRole("button", { name: "资料", exact: true }).click();
   await page.getByLabel("上传资料").setInputFiles({
     name: "合成资料.txt",

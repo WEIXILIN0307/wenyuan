@@ -12,6 +12,7 @@ def main():
     parser.add_argument("--name", required=True)
     parser.add_argument("--base-url")
     parser.add_argument("--model")
+    parser.add_argument("--thinking", choices=["default", "on", "off"], default="default")
     parser.add_argument(
         "--key-stdin", action="store_true", help="从标准输入读取密钥；不要把密钥写进命令参数或 shell 历史"
     )
@@ -29,7 +30,11 @@ def main():
         if not db.execute("SELECT id FROM users WHERE id=?", (args.name,)).fetchone():
             parser.error("用户不存在")
     validate_provider_url(args.base_url)
-    config = Provider(base_url=args.base_url, model=args.model).model_dump()
+    config = Provider(
+        base_url=args.base_url,
+        model=args.model,
+        thinking={"default": None, "on": True, "off": False}[args.thinking],
+    ).model_dump()
     key = sys.stdin.read(2001).rstrip("\r\n") if args.key_stdin else "" if args.clear_key else None
     if key is not None and len(key) > 2000:
         parser.error("密钥过长")

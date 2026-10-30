@@ -32,7 +32,7 @@ bash scripts/dev.sh
 
 ## 模型配置
 
-工作台设置只填写 OpenAI 兼容服务地址、模型名称和超时。密钥**不进入浏览器**，
+工作台设置填写 OpenAI 兼容服务地址、模型名称和可选思考模式。密钥**不进入浏览器**，
 由管理员在服务端配置。服务需支持 `response_format: {type: "json_object"}` 与
 `finish_reason=stop`。默认只允许 `https://api.openai.com`；使用本地服务时显式允许 origin：
 
@@ -46,6 +46,8 @@ cd ..
 bash scripts/dev.sh
 ```
 
+默认不发送服务商扩展参数。支持 vLLM/Qwen 的本地服务可在页面关闭思考，或 CLI
+加 `--thinking off`（发送 `chat_template_kwargs`）；其他服务保持默认。未实测时不承诺延迟收益。
 不加密钥选项会保留已有密钥；`--clear-key` 清除；无密钥本地服务可直接使用。
 管理员只允许可信 origin；请求禁止重定向、不继承系统代理，路径只支持空路径或 `/v1`。
 页面告知文稿和资料可能发送给配置的模型。服务端 Fernet 加密密钥，密钥文件权限

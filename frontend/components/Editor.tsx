@@ -201,11 +201,17 @@ const Editor = forwardRef<EditorHandle, Props>(function Editor(props, ref) {
       ),
     );
     const v = view.current!;
-    v.dispatch(
-      v.state.tr
-        .replaceSelectionWith(schema.nodes.table.create({ id: id() }, rows))
-        .scrollIntoView(),
+    const tableId = id();
+    const tr = v.state.tr.replaceSelectionWith(
+      schema.nodes.table.create({ id: tableId }, rows),
     );
+    tr.doc.descendants((n, pos) => {
+      if (n.attrs.id === tableId) {
+        tr.setSelection(TextSelection.near(tr.doc.resolve(pos + 1)));
+        return false;
+      }
+    });
+    v.dispatch(tr.scrollIntoView());
     v.focus();
   };
   const image = async (file?: File) => {

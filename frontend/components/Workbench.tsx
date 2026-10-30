@@ -80,6 +80,7 @@ export default function Workbench() {
       model: "",
       key_configured: false,
       timeout: 60,
+      thinking: null as boolean | null,
     });
   const [history, setHistory] = useState<any[]>([]),
     [records, setRecords] = useState<any[]>([]),
@@ -1150,6 +1151,33 @@ export default function Workbench() {
                 }
               />
             </label>
+            <label>
+              本地模型思考（vLLM/Qwen 扩展）
+              <select
+                aria-label="模型思考模式"
+                value={
+                  provider.thinking == null
+                    ? "default"
+                    : provider.thinking
+                      ? "on"
+                      : "off"
+                }
+                onChange={(e) =>
+                  setProvider({
+                    ...provider,
+                    thinking:
+                      e.target.value === "default"
+                        ? null
+                        : e.target.value === "on",
+                  })
+                }
+              >
+                <option value="default">服务商默认</option>
+                <option value="off">关闭（服务支持时可减少等待）</option>
+                <option value="on">开启</option>
+              </select>
+              <small>仅用于支持该扩展的本地服务；其他服务请选择默认。</small>
+            </label>
             <p className="notice">
               服务端密钥：
               {provider.key_configured
@@ -1167,6 +1195,7 @@ export default function Workbench() {
                         base_url: provider.base_url,
                         model: provider.model,
                         timeout: provider.timeout,
+                        thinking: provider.thinking ?? null,
                       },
                       "PUT",
                     ),
