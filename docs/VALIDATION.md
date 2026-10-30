@@ -18,6 +18,7 @@
 | npm 生产依赖公告 | `cd frontend && pnpm audit --prod` | 0 条已知漏洞（仅表示当时公告库扫描结果） |
 | Python 运行时公告 | `uv export --locked --no-dev --no-emit-project --no-hashes -o /tmp/wenyuan-runtime-requirements.txt`，再 `uvx pip-audit --disable-pip --no-deps -r /tmp/wenyuan-runtime-requirements.txt` | No known vulnerabilities found；锁中依赖均已枚举，扫描用导出清单不替代带哈希 uv.lock |
 | 依赖许可库存 | `backend/.venv/bin/python scripts/third_party.py`（本机另指定自定义 `--store-dir`） | 76 个已安装运行/开发依赖；保留 220 份随包 license/notice（含 bundled notices） |
+| 推送前密钥扫描 | Gitleaks **8.30.1** `gitleaks git --redact=100 --report-format json .` | 完整独立 Git 历史 0 findings；同时核对仅提交 `.env.example`，未跟踪真实 `.env`、数据库、私钥、运行缓存或临时符号链接；扫描不等于对未知模式的绝对保证 |
 
 后端覆盖 revision 冲突、并发双写、重复幂等 ID、回读、未知状态查询、错误回滚、
 原文 hash、重复文本第二节点、UTF-16 emoji 边界、权限及删除级联；格式覆盖段落、
