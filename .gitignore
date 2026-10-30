@@ -16,3 +16,7 @@ next-env.d.ts
 /grant-private/
 /demo-materials/
 .uv-cache
+
+# Office lock files can contain local account and host details.
+.~lock.*#
+~$*.docx

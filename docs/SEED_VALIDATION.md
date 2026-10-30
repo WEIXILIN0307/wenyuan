@@ -1,67 +1,62 @@
 # 种子计划增量验证（2026-10-30）
 
-代码基线 `92c5134`；首个增量提交 `c7d2084`。后续本地思考模式与表格光标修复
-以本文件最终所在提交之前的功能提交为准。
-本机 Linux x86_64 / Xeon Gold 6226R / Python 3.12.13 / Node 24.11.1 / pnpm 10.17.1；
-Chromium 148.0.7778.96，1600×1000，系统 Noto CJK 字体。共享主机，不作生产性能外推。
-旧记录 [VALIDATION](VALIDATION.md) 保留历史结论，本文件记录后续授权后的增量验证。
+原基线 `92c5134`；功能提交 `c7d2084`（模板/输入/资料/检查）与 `f68770e`
+（可选本地思考模式、表格光标修复）。本文件后续提交仅整理文档和忽略规则。
+旧记录 [VALIDATION](VALIDATION.md) 保留初始状态，本文件记录获授权后的增量验证。
+
+环境：Linux x86_64 / Xeon Gold 6226R / Python 3.12.13 / Node 24.11.1 / pnpm 10.17.1；
+Chromium 148.0.7778.96、1600×1000、系统 Noto CJK 字体，共享开发主机。
+本机浏览器路径为 `/home/songbinbin/.cache/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-linux64/chrome-headless-shell`，下表以 `$WENYUAN_CHROMIUM` 表示。
+所有文稿、资料和账号均为本轮隔离创建；模型经维护者明确授权，服务端消费旧项目
+本地部署配置，未输出、提交凭据或读取旧客户文稿。
 
 ## 实际命令与结果
 
-| 类别 | 命令 | 结果 |
+| 类别 | 命令（从项目根目录，注明处先 cd） | 结果与范围 |
 |---|---|---|
-| 后端单元/API/模拟传输 | `cd backend && PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest -p asyncio -q` | 60 passed，5.29s；1 条 Starlette/httpx 测试客户端弃用警告；0 跳过 |
-| 静态检查 | `cd backend && .venv/bin/ruff check wenyuan tests` | 通过 |
-| 前端类型 | `cd frontend && pnpm typecheck` | 通过 |
-| 前端单元 | `cd frontend && pnpm test` | 9 passed；60 次撤销/重做等；0 跳过 |
-| 真实浏览器/真实应用，AI 成功采用测试 HTTP 模拟器 | `cd frontend && WENYUAN_CHROMIUM=/本机/chrome-headless-shell pnpm test:e2e` | 最终 8 passed，约 1 分钟；0 跳过。含模板/检查/精确片段/输入上下文、断网恢复、双标签冲突、生成期间修改拒绝 |
-| 生产构建 | `cd frontend && WENYUAN_BACKEND=http://127.0.0.1:8118 pnpm build` | 成功；生产模式 `pnpm start --port 3118` 实际启动，API 使用隔离数据目录监听 8118 |
-| 真实模型（维护者明确授权） | 本地 `grant-private/probe_rewrite.py`；通过实际 API 创建合成文稿与资料、生成提案、确认、GET 回读 | 原公文项目部署的 qwen3.5-9b；88.78s，1 个有效引用，4068 tokens（服务端报告），确认前未改正文，确认后内容 hash 回读一致 |
+| 后端单元/API/模拟传输 | `cd backend && PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest -p asyncio -q` | 首个增量完整运行 **60 passed，5.29s**；1 条 Starlette/httpx 测试客户端弃用警告，0 跳过 |
+| 本地模型参数后续回归 | `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 backend/.venv/bin/python -m pytest -p asyncio backend/tests/test_ai.py -q` | 后续代码 **20 passed，1.67s**，含新增 2 个可选思考参数案例；未再次整套运行，不宣称 62 passed |
+| Python 静态检查 | `backend/.venv/bin/ruff check backend/wenyuan backend/tests scripts` | 通过 |
+| 前端类型 | `cd frontend && pnpm typecheck` | 通过；后续生产构建亦包含类型检查 |
+| 前端单元 | `cd frontend && pnpm test` | **9 passed**，0 跳过；包括 60 次撤销/重做，相关 lib 之后未改动 |
+| 真实 Chromium/Next/FastAPI/SQLite，AI 成功用测试 HTTP 模拟器 | `cd frontend && WENYUAN_CHROMIUM="$WENYUAN_CHROMIUM" pnpm test:e2e` | 首个增量完整运行 **8 passed，约 1 分钟**，0 跳过；模板、片段定位、输入上下文、恢复、双标签冲突、生成期间修改拒绝等 |
+| 表格修复后针对性浏览器回归 | `cd frontend && WENYUAN_CHROMIUM="$WENYUAN_CHROMIUM" pnpm test:e2e --grep 'paste text'` | **1 passed，18.0s**；9 格键盘填写、逐格断言、导出后重新导入；其余 7 条未再次运行 |
+| 最终生产构建/实际运行 | `cd frontend && WENYUAN_BACKEND=http://127.0.0.1:8118 pnpm build`；`pnpm start --port 3118` | 成功；API 8118 与 Web 3118 从隔离数据目录启动，实际浏览器录制 |
+| 真实模型改写、确认、回读 | `PYTHONPATH=backend backend/.venv/bin/python grant-private/probe_rewrite.py`（本地私有复现脚本） | 原部署 **qwen3.5-9b**；默认模式一次 88.78s / 4068 tokens，关闭思考后一次 **6.08s / 718 tokens**，均 1 个有效引用；确认前不写，确认后 hash 回读一致 |
+| 真实生成安全路径 | `PYTHONPATH=backend backend/.venv/bin/python grant-private/verify_live_safety.py` | 生成期间人工写入后旧提案 **409**，新稿保留；取消为 cancelled；真实无效模型 **HTTP 404**，正文不变，恢复原配置 |
+| 真实浏览器失败提示 | `WENYUAN_CHROMIUM="$WENYUAN_CHROMIUM" node grant-private/post-demo.cjs` | 实际服务 HTTP 404 在界面可见，正文未变；截图 `12-real-failure.png` |
+| 连续真实浏览器录屏 | `WENYUAN_CHROMIUM="$WENYUAN_CHROMIUM" node grant-private/record-demo.cjs`；FFmpeg 加字幕封装 | 最终 **151.24s，1600×1080，H.264 MP4，3,546,188 bytes**；真实本地模型、合成账号与资料，无配音，无界面伪造或加速剪接 |
+| 导出独立回读 | `PYTHONPATH=backend backend/.venv/bin/python grant-private/check_export.py` | 2717 bytes DOCX；**4 个标题、2 个列表项、3×3 表格**，逐格文字核对通过；保留受限子集损失提示 |
+| 独立 Office | `DISPLAY=:118 SAL_USE_VCLPLUGIN=gen libreoffice -env:UserInstallation=file:///tmp/wenyuan-gui-final118 --norestore --nofirststartwizard --nologo --writer /本地/demo-materials/exported-demo.docx` | LibreOffice **7.3.7.2** 实际 Writer GUI 只读打开，在独立 Xvfb 中由代理视觉检查；无维护者人工签署 |
+| Office PDF 对照 | `libreoffice -env:UserInstallation=file:///tmp/wenyuan-final-export-render118 --headless --convert-to pdf --outdir demo-materials demo-materials/exported-demo.docx`；`pdftotext -layout ...` | **1 页 A4**，标题、正文、列表与每格文字齐全；实际 GUI 与 PDF 图像见本地材料 |
+| 媒体完整性 | `python -S grant-private/check_media.py`（ffprobe + FFmpeg 全片解码）；抽帧视觉核对 | H.264、尺寸、时长、全片解码通过；67s、101s 等关键画面文字可读。未声称人工完整观看或多播放器验收 |
+| 密钥/私有文件 | `gitleaks git --redact=100 --report-format json .`（8.30.1）；已跟踪文件与已知凭据/联系方式精确比较 | 功能提交后 8 个独立提交，**0 findings**；无已知模型密钥、提供的电话/邮箱、表单或新媒体进入 Git。扫描不代表绝对保证 |
 
-首次浏览器运行为 6 通过、2 失败：无密钥请求的空 Bearer 头导致模型连接失败，以及
-新测试按钮名称写错。修复后针对两条流程复测 2 passed，再完整复测 8 passed。
-真实模型首轮草稿引用不合法，91.61s 后被拒绝且未写入；明确 source_data 的 chunk_id
-后，真实改写验证通过。未保留或打印模型密钥和远程原始错误正文。
+## 发现、修复与范围
 
-## 覆盖与边界
+- 首次浏览器为 6 通过、2 失败：无密钥请求带空 Bearer 头，以及新测试按钮名错误。
+  修复后针对性 2 passed，再完整 8 passed。无密钥时不发送 Authorization。
+- 真实草稿曾在 91.61s 后因错误引用被拒绝、正文未变；明确传递 chunk_id 后改写通过。
+  引用只证明摘录存在，不能证明全部句子由引用支撑。
+- 一轮录屏真实请求超过 120s，界面超时且无写入；新增可选思考开关，默认不发送厂商
+  参数。一次模型不愿引用合成资料时显示无引用警示，没有伪造引用；澄清合成任务后
+  重新录制。上述不完整片段不冒充最终成功演示。
+- 复核还发现表格插入后的光标在表格外，早期用例只检查“存在表格”。已修复选区到
+  首格，增加逐格输入与导出回读，最终录屏和导出重新制作。导出回读一致不能证明
+  用户操作符合预期，须同时核对单元格内容。
+- Office 对照中内容/基础结构齐全，但标题字体/大小、项目符号、表头底色/粗细与
+  浏览器有显示差异。保留受限兼容声明，不宣称 Word/WPS 无损或法定公文格式认证。
+- 安全边界覆盖 owner 隔离、危险文件与解压限制、DTD/实体、外部图片不抓取、模型
+  origin、密钥密文；公开 provider 无密钥字段。没有新增依赖，锁文件/许可清单保留。
 
-- 文稿、事务和格式沿用现有实现；新增模板绑定经同一事务，原生 JSON 往返保留。
-- 资料上传、SQLite 检索和精确片段回读已通过真实浏览器；引用必须匹配版本、片段 ID
-  与逐字摘录，不能据此声称所有生成句子都被引用证明。
-- 模型超时、取消、截断、错误 JSON、错误引用、过期修订、拒绝与重复文本定位保留
-  单元/模拟测试。真实模型仅验证上述明确动作，不把其余 6 种操作都写成已真实验收。
-- 安全边界测试覆盖 owner 隔离、危险文件、解压限制、DTD/实体、外部图片不抓取、
-  模型 origin 限制、密钥密文。新增 public provider 不含密钥字段，CLI 仅从 stdin 收密钥。
-- 中文输入法仅 Chromium CDP 组合协议模拟；操作系统输入法候选框和人工输入仍待验收。
-- 本轮长段单次基线：4500 UTF-16 单元，输入至自动保存 835ms（含 700ms debounce），
-  打开基础分页预览 140ms，4 页。不视为性能提升、p95 或跨设备承诺。
+## 尚未完成
 
-## 本地媒体与独立 Office
+操作系统中文输入法仍只做 CDP 组合协议模拟，候选框、真实输入需人工补验；Word/WPS
+未验收，LibreOffice GUI 由代理操作与视觉核对，未由维护者人工签署。七种 AI 操作均有
+接口，但真实模型主要验证改写及安全路径，不将模拟成功扩写为全部动作质量已验收。
 
-连续录像、导出回读、Office GUI 检查与材料隔离的最终结果在本轮交付后补记。
-申请表与联系方式只保存在根目录忽略文件和 grant-private；演示媒体位于 demo-materials，
-不推送。未提交申请，未创建 GitLink 镜像。当前外部用户、商业化与旧素材授权均不推测。
+性能仅单次基线：4500 UTF-16 单元插入至保存 835ms（含 700ms debounce），基础分页
+140ms、4 页；没有多设备、长文分位数或性能提升结论。真实调用用量由服务报告，未核算费用。
 
-## 真实模型中发现的限制与后续修正
-
-首次完整录屏调用在 120 秒超时，界面提示失败且无正文修改；不把该片段交付为成功演示。
-本地服务默认思考耗时较长，新增可选的 vLLM/Qwen 思考开关，默认不发送厂商字段；
-参数两种状态经 `tests/test_ai.py` 回归，最终该文件 **20 passed，1.67s**。前端类型检查
-与生产构建再次通过；真实浏览器中的新配置显示由本轮实际演示验证。此前完整后端
-60 项 + 新增 2 个参数案例，即当前总计 62 个案例，**未再次整套运行**，不写成 62 passed。
-关闭思考后的单次真实改写 **6.08s / 718 tokens**，1 个引用，确认保存并回读一致；
-这是单次实测，不归因或承诺普遍加速。一次真实返回未给引用并解释合成资料限制，界面
-显示待审核和无引用警示；未伪造引用，改进合成任务的输入说明后重新录制。
-
-`PYTHONPATH=backend backend/.venv/bin/python grant-private/verify_live_safety.py` 已实际执行：
-真实生成期间提交人工新文字，旧提案接受返回 **409**，新文字保留；真实请求取消后为
-cancelled；将模型名临时设为明确不存在的合成标识，真实服务返回 **HTTP 404**，提案失败
-且正文 hash 不变；最后恢复原配置。只在隔离账号与合成文稿中操作。
-
-
-演示复核暴露表格插入后光标停在表格外的问题：旧用例只断言存在表格，未断言能连续填格。
-修复插入事务将选区放入首格；扩展已有浏览器用例，键盘填写 9 格并断言每格内容，
-再导出/重新导入 DOCX。命令 `cd frontend && WENYUAN_CHROMIUM=/本机/浏览器 pnpm test:e2e --grep 'paste text'`
-实际 **1 passed，18.0s**。随后生产构建与类型检查通过；未重跑其余 7 条未受影响流程。
-前版演示中的空表格与写在表格外的文字已识别为不合格材料，最终录制会逐格断言，
-导出回读也核对每格内容；不能用“导出回读一致”掩盖录制操作错误。
+本轮申请表、联系方式、截图、视频、PDF 与导出 DOCX 仅保存在忽略路径；未提交基金
+申请，未上传这些媒体，未创建 GitLink 镜像。外部用户、商业化与旧素材授权不推测。

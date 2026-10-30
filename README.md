@@ -113,6 +113,7 @@ pnpm build
 ## 演示与申报
 
 复现步骤见 [演示说明](docs/DEMO.md)，本轮结果见 [种子计划验证记录](docs/SEED_VALIDATION.md)。
-本地 `demo-materials/` 保存实际运行截图、连续演示视频与导出文件；按维护者要求不推送
+本地 `demo-materials/wenyuan-demo.mp4` 为约 2 分 31 秒真实模型演示；
+`demo-materials/` 另有实际运行截图、DOCX 与 LibreOffice 对照 PDF。按维护者要求不推送
 媒体。申请表及个人联系方式仅保存在本地忽略目录，未提交申请、未创建 GitLink 镜像。
 项目目前由 1 人维护，无已核实外部用户与商业收入，不以合成案例代替实际用户。
