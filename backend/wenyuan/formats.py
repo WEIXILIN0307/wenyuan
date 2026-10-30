@@ -17,6 +17,7 @@ from xml.etree import ElementTree as ET
 from defusedxml import ElementTree as SafeET
 from markdown_it import MarkdownIt
 from PIL import Image
+from .presets import PRESETS
 
 from .core import Layout, image_bytes, node, plain, safe_link, uid, validate_document
 
@@ -770,5 +771,14 @@ def import_file(name, data):
         title = envelope.get("title", "导入文章")
         if not isinstance(title, str) or not 1 <= len(title.strip()) <= 200:
             raise ValueError("原生 JSON 标题无效")
-        return {"content": envelope["content"], "layout": layout, "warnings": [], "title": title.strip()}
+        template_id = envelope.get("template_id")
+        if template_id is not None and template_id not in PRESETS:
+            raise ValueError("原生 JSON 模板标识无效")
+        return {
+            "content": envelope["content"],
+            "layout": layout,
+            "warnings": [],
+            "title": title.strip(),
+            "template_id": template_id,
+        }
     raise ValueError("仅支持 UTF-8 txt/md、原生 JSON 与 DOCX；不解析宏、PDF、HTML 或旧 DOC")

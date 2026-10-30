@@ -14,6 +14,7 @@ export type Layout = {
   line_height: number;
 };
 export type Document = {
+  template_id?: string | null;
   id: string;
   title: string;
   revision: number;

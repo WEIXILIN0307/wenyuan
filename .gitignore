@@ -12,4 +12,7 @@ test-results/
 playwright-report/
 *.tsbuildinfo
 next-env.d.ts
+/青年开源*.docx
+/grant-private/
+/demo-materials/
 .uv-cache

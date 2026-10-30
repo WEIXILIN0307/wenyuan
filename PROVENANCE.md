@@ -18,3 +18,9 @@
 `frontend/AGENTS.md` 的 Next.js 规则块由 Next 16.4.1 的 `next dev` 自动生成；
 `next-env.d.ts` 和 `.next` 类型声明同样由 Next 生成并忽略。它们不属于旧项目迁移，
 也不计作自研编辑能力；其上游许可与 Next 的 bundled notices 一并保留。
+
+本轮模板 `backend/wenyuan/presets.py` 与其示例文字为新编写的合成内容，只参考旧业务能力，
+没有复制旧模板、代码、字体或图片。规则检查使用 Python 标准库 `datetime` 和字面格式校验。
+本轮未新增运行/开发依赖；本地填表使用环境已有 python-docx（MIT），录像/检查使用系统
+FFmpeg、LibreOffice、Xvfb，不打包这些工具或字体进入源码/发行物。维护者授权消费旧部署
+模型做合成验收，该授权不视为模型权重再分发许可，仓库不含权重或旧模型密钥。

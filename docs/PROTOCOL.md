@@ -1,6 +1,6 @@
 # 文档与 AI 编辑协议 v1
 
-正文唯一来源为 SQLite documents.body 中的 `{title, content, layout}`，content 为
+正文唯一来源为 SQLite documents.body 中的 `{title, content, layout, template_id?}`，content 为
 PM 兼容树，外层 schema_version=1。不可变 revisions 是只读历史，不是第二份可编辑
 正文；浏览器恢复稿仅是未确认事务的本地备份，不会后台反向覆盖服务端。
 
@@ -50,3 +50,11 @@ AI 不操作 DOM，不持有文件/网络/删除工具。材料位于独立参�
 资料索引使用 SQLite FTS5；分片写入、更新和删除通过数据库触发器同步索引，启动时
 补建已有片段缺失的索引项。中文采用字符和双字字面分词，查询最多 64 个字面词和
 128 个候选片段，再按命中比排序；不是语义向量检索，也不作覆盖率保证。
+
+
+模板绑定为可选 `template_id`，通过现有 metadata 事务修改/清除；绑定不改变正文权威来源。
+原生 JSON 保留绑定，Markdown/DOCX 不保留文渊特有绑定，重新导入后不会继续模板章节检查。
+`writing-context` 是无模型调用的预检查；提案存储实际使用的选区、正文背景、预设与资料快照，
+浏览器轮询后展示该快照。资料在这两个请求间变化时，以提案持久化的快照为准。
+本轮输入总预算为 60000 字符，超出即拒绝，不静默截断。所有接受检查仍在现有事务中完成。
+模型密钥只经服务端 CLI 配置；公开 provider schema 禁止 api_key，GET 仅返回是否已配置。

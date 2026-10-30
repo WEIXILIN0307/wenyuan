@@ -195,7 +195,6 @@ test("HTTP simulator: preview, reject, accept, repeated text targeting and stale
     data: {
       base_url: "http://127.0.0.1:9207/v1",
       model: "explicit-test-simulator",
-      api_key: "not-a-real-secret",
       timeout: 10,
     },
   });
@@ -257,4 +256,49 @@ test("HTTP simulator: preview, reject, accept, repeated text targeting and stale
   await expect(page.locator(".ProseMirror p").first()).toContainText(
     "人工作出的新修改",
   );
+});
+
+test("original preset, explainable checks, exact source navigation and actual input context", async ({
+  page,
+}) => {
+  await login(page);
+  await page.getByRole("button", { name: "从模板创建" }).click();
+  await expect(page.locator(".template-card")).toHaveCount(4);
+  await page.getByRole("button", { name: "使用通知模板" }).click();
+  await saved(page);
+  await expect(page.locator(".ProseMirror h2")).toHaveText([
+    "活动安排",
+    "参与方式",
+    "联系与反馈",
+  ]);
+  await page.getByRole("button", { name: "检查", exact: true }).click();
+  await page.getByRole("button", { name: "检查已保存文稿" }).click();
+  await expect(page.locator(".check-card").first()).toContainText(
+    "正文尚无实际内容",
+  );
+  await page.getByRole("button", { name: "资料", exact: true }).click();
+  await page.getByLabel("上传资料").setInputFiles({
+    name: "合成模板资料.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from(
+      "合成阅读活动于2026年10月30日星期五在社区图书室举行。参与方式为现场报名，全部为演示样例。",
+    ),
+  });
+  await expect(page.locator(".source-card")).toContainText("合成模板资料.txt");
+  await page.getByLabel("检索资料").fill("阅读活动");
+  await page.getByRole("button", { name: "检索", exact: true }).click();
+  await page.getByRole("button", { name: /打开此片段/ }).click();
+  await expect(page.locator(".chunk.focused")).toContainText("星期五");
+  await page.getByRole("button", { name: "✧ 写作助手" }).click();
+  await page.getByLabel("写作要求").fill("依据合成阅读活动资料生成通知");
+  await page.getByRole("button", { name: "查看本轮输入" }).click();
+  await expect(page.locator(".input-context")).toContainText("模板：通知");
+  await expect(page.locator(".input-context .citation")).toContainText(
+    "社区图书室",
+  );
+  await page.reload();
+  await page
+    .getByRole("button", { name: /关于开展社区阅读活动的通知/ })
+    .click();
+  await expect(page.locator(".ProseMirror h2")).toHaveCount(3);
 });

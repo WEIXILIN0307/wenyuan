@@ -3,7 +3,8 @@
 面向中文文章、公文与长文档的单机 AI 写作工作台。Next.js/React + FastAPI + SQLite，
 正文以版本化 JSON 保存，AI 先提出建议，用户确认后通过同一事务入口写入。
 
-这是可运行的 0.1 开发版本，**尚未完成全部首期发布验收**。真实模型、系统输入法和
+这是可运行的 0.1 开发版本，**尚未完成全部首期发布验收**。本轮增量对照见
+[功能对照](docs/SEED_GAP_ANALYSIS.md)。真实模型、系统输入法和
 Office 人工兼容性验收状态见 [验证记录](docs/VALIDATION.md)，不把模拟测试算作真实
 模型验证，不承诺任意 DOCX 无损往返。不包含或下载完整 Office 引擎。
 
@@ -31,22 +32,29 @@ bash scripts/dev.sh
 
 ## 模型配置
 
-在工作台设置中填入 OpenAI 兼容服务的地址、模型名称、密钥。服务需支持
-`response_format: {type: "json_object"}` 和正常 `finish_reason=stop`。
-默认只允许 `https://api.openai.com`。允许本地服务时，在启动 API 前配置：
+工作台设置只填写 OpenAI 兼容服务地址、模型名称和超时。密钥**不进入浏览器**，
+由管理员在服务端配置。服务需支持 `response_format: {type: "json_object"}` 与
+`finish_reason=stop`。默认只允许 `https://api.openai.com`；使用本地服务时显式允许 origin：
 
 ```bash
 export WENYUAN_MODEL_ORIGINS='https://api.openai.com,http://127.0.0.1:11434'
+cd backend
+WENYUAN_DATA=../.data .venv/bin/python -m wenyuan.manage configure-provider \
+  --name local --base-url http://127.0.0.1:11434/v1 --model your-model
+# 有密钥时加 --key-stdin，从安全的标准输入传入；不要把密钥写入参数或历史。
+cd ..
 bash scripts/dev.sh
 ```
 
-管理员只应允许可信 origin；这也明确授权 API 访问对应模型主机。用户不能任意抓取
-URL，模型请求禁止重定向且不继承系统代理。基础路径只支持空路径或 `/v1`。页面明确
-提示选区与检索资料可能发送给该服务商；密钥存于服务端 Fernet 密文，密钥文件权限
-0600，GET 只返回掩码。备份时必须同时备份数据库和 `provider.key`，安全迁移该目录。
+不加密钥选项会保留已有密钥；`--clear-key` 清除；无密钥本地服务可直接使用。
+管理员只允许可信 origin；请求禁止重定向、不继承系统代理，路径只支持空路径或 `/v1`。
+页面告知文稿和资料可能发送给配置的模型。服务端 Fernet 加密密钥，密钥文件权限
+0600，配置接口仅返回 `key_configured`。备份需同时保护数据库和 `provider.key`。
 
 ## 已接入的工作流程
 
+- 原创通知、工作总结、简报、通用文章模板；创建新文稿并设置基础页面与标题样式。
+- 规则检查：空标题/正文、模板待填项和必要章节、日期星期、历史引用存续；展示依据，无综合分。
 - 创建/打开/重命名/删除；自动保存、本地恢复稿、失败提示；JSON 原生文件。
 - PM 基础编辑：中文文本、标题、粗斜体、字号颜色、对齐段距、列表链接、PNG/JPEG、
   简单矩形表格、复制粘贴、快捷键和历史。段落/节点使用唯一 ID。
@@ -54,6 +62,7 @@ URL，模型请求禁止重定向且不继承系统代理。基础路径只支�
   可点击文字映射回编辑位置。连续编辑区本身不宣称实现 Word 分页。
 - Markdown、DOCX 明确子集导入/导出；保留导入原件、可见损失说明、导出回读校验。
 - TXT/MD/DOCX/原生 JSON 资料提取、SQLite FTS5 中文字符/双字字面索引、片段回读和版本引用。
+- 生成前可查看实际选区、正文背景和资料，引用可定位到原始片段。
 - 真实 HTTP 模型适配器：提纲、草稿、同段选区改写/续写/扩写/压缩/纠错；生成任务可
   取消，差异预览、接受/拒绝；接受必须匹配生成时修订、原文 hash 和原提案操作。
 - 统一事务、所有权、revision CAS、幂等 ID、未知结果查询、不可变修订和操作记录。
@@ -98,3 +107,10 @@ pnpm build
 人工验收及目标平台依赖/二进制的许可核验；旧项目不明权属内容不在发布范围。
 见 [审计](docs/AUDIT.md)、[PROVENANCE](PROVENANCE.md)、[第三方清单](THIRD_PARTY_NOTICES.md)
 与 [LICENSE](LICENSE)。包版本与完整性锁定在 `backend/uv.lock` 和 `frontend/pnpm-lock.yaml`。
+
+## 演示与申报
+
+复现步骤见 [演示说明](docs/DEMO.md)，本轮结果见 [种子计划验证记录](docs/SEED_VALIDATION.md)。
+本地 `demo-materials/` 保存实际运行截图、连续演示视频与导出文件；按维护者要求不推送
+媒体。申请表及个人联系方式仅保存在本地忽略目录，未提交申请、未创建 GitLink 镜像。
+项目目前由 1 人维护，无已核实外部用户与商业收入，不以合成案例代替实际用户。

@@ -196,7 +196,14 @@ def test_model_ssrf_origin_allowlist(provider, url):
 
 
 def test_provider_key_encrypted_and_masked(store, provider, client):
-    assert client.get("/provider").json()["api_key"] == "********"
+    public = client.get("/provider").json()
+    assert public["key_configured"] is True and "api_key" not in public
+    assert "test-key-not-real" not in json.dumps(public)
+    assert (
+        client.put("/provider", json={k: provider[k] for k in ("base_url", "model", "timeout")}).status_code
+        == 200
+    )
+    assert store.provider("alice", True)["api_key"] == "test-key-not-real"
     with store.connect() as db:
         row = db.execute("SELECT * FROM providers").fetchone()
         assert "test-key-not-real" not in row["encrypted_key"] + row["body"]

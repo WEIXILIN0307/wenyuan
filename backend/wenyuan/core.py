@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator, model_validator
 from PIL import Image
+from .presets import PRESETS
 
 
 class Conflict(ValueError):
@@ -113,6 +114,7 @@ class Metadata(BaseModel):
     type: Literal["metadata"]
     title: str = Field(default="", min_length=1, max_length=200)
     layout: Layout | None = None
+    template_id: str | None = None
 
 
 operation_adapter = TypeAdapter(
@@ -363,7 +365,7 @@ def apply_operations(document: dict, operations: list[dict]):
                 raise ValueError("append_blocks 字段无效")
             result["content"]["content"].extend(deepcopy(op["blocks"]))
         elif kind == "metadata":
-            if set(op) - {"type", "title", "layout"}:
+            if set(op) - {"type", "title", "layout", "template_id"}:
                 raise ValueError("metadata 字段无效")
             if "title" in op:
                 if not isinstance(op["title"], str) or not 1 <= len(op["title"].strip()) <= 200:
@@ -371,6 +373,10 @@ def apply_operations(document: dict, operations: list[dict]):
                 result["title"] = op["title"].strip()
             if "layout" in op:
                 result["layout"] = Layout.model_validate(op["layout"]).model_dump()
+            if "template_id" in op:
+                if op["template_id"] is not None and op["template_id"] not in PRESETS:
+                    raise ValueError("模板标识无效")
+                result["template_id"] = op["template_id"]
         else:
             raise ValueError("未知事务类型")
     validate_document(result["content"])

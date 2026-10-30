@@ -873,3 +873,67 @@ details button {
     max-width: 96vw;
   }
 }
+.template-entry {
+  margin: 0 18px 10px;
+  font-size: 12px;
+}
+.template-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.template-card {
+  padding: 15px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.template-card h3 {
+  margin: 0 0 8px;
+}
+.template-card p {
+  font-size: 12px;
+}
+.template-card button {
+  margin: 12px 0;
+}
+.check-card {
+  margin: 15px 0;
+  padding: 13px;
+  background: #fff9ed;
+  border-left: 3px solid #b69a61;
+}
+.check-card p {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.input-context {
+  background: #eff4ec;
+  padding: 10px;
+  font-size: 11px;
+  margin: 12px 0;
+}
+.input-context summary {
+  cursor: pointer;
+}
+.input-context pre {
+  white-space: pre-wrap;
+  max-height: 180px;
+  overflow: auto;
+  font: 11px/1.8 var(--sans);
+}
+.chunk.focused {
+  outline: 2px solid #5e936a;
+  background: #e1edda;
+}
+.demo-disclosure {
+  background: #6a4d18;
+  color: #fff6df;
+  text-align: center;
+  font-size: 13px;
+  padding: 6px;
+  letter-spacing: 0.5px;
+}
+.panel-tabs button {
+  padding: 8px 5px;
+}

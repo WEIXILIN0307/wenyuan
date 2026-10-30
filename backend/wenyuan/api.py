@@ -14,7 +14,9 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
 
-from .ai import Generate, Provider, generate, prepare, validate_provider_url
+from .ai import Generate, Provider, generate, prepare, build_context, validate_provider_url
+from .writing import template, check_document
+from .presets import PRESETS
 from .search import retrieve, split_source
 from .core import Conflict, Transaction, canonical, digest, plain, uid
 from .store import Store
@@ -166,6 +168,18 @@ def create_app(directory: Path | None = None):
     def documents(user=Depends(owner)):
         return store.list(user)
 
+    @app.get("/templates")
+    def templates(user=Depends(owner)):
+        return [template(identifier) for identifier in PRESETS]
+
+    @app.get("/documents/{doc_id}/checks")
+    def checks(doc_id: str, revision: int, user=Depends(owner)):
+        return check_document(store, user, doc_id, revision)
+
+    @app.post("/documents/{doc_id}/writing-context")
+    def writing_context(doc_id: str, body: Generate, user=Depends(owner)):
+        return build_context(store, user, doc_id, body)
+
     @app.post("/documents", status_code=201)
     def create(body: CreateDocument, user=Depends(owner)):
         return store.create(user, body.title)
@@ -215,6 +229,7 @@ def create_app(directory: Path | None = None):
             result["content"],
             result["layout"],
             original=(name, data, result["warnings"]),
+            template_id=result.get("template_id"),
         )
         return {"document": doc, "warnings": result["warnings"]}
 
@@ -237,7 +252,13 @@ def create_app(directory: Path | None = None):
         if doc["revision"] != revision:
             raise Conflict("导出前版本已变化，请刷新")
         if kind == "json":
-            data = canonical({k: doc[k] for k in ("schema_version", "content", "layout", "title")}).encode()
+            data = canonical(
+                {
+                    k: doc[k]
+                    for k in ("schema_version", "content", "layout", "title", "template_id")
+                    if k in doc
+                }
+            ).encode()
             return {
                 "data": base64.b64encode(data).decode(),
                 "warnings": [],
@@ -330,7 +351,7 @@ def create_app(directory: Path | None = None):
     @app.put("/provider")
     def save_provider(body: Provider, user=Depends(owner)):
         validate_provider_url(body.base_url)
-        store.save_provider(user, body.model_dump())
+        store.save_provider(user, {**body.model_dump(), "api_key": None})
         return store.provider(user)
 
     @app.post("/documents/{doc_id}/proposals", status_code=202)

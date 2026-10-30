@@ -15,6 +15,9 @@ import {
 } from "../lib/model";
 import { SaveQueue, type Recovery } from "../lib/save";
 import { recoveryKey, otherDrafts } from "../lib/recovery";
+import TemplatePicker, { type Template } from "./TemplatePicker";
+import ChecksPanel from "./ChecksPanel";
+import WritingContext, { type InputContext } from "./WritingContext";
 
 type DocSummary = {
   id: string;
@@ -24,6 +27,9 @@ type DocSummary = {
 };
 type Source = { id: string; name: string; version: string; warnings: string[] };
 type Proposal = {
+  document_context?: string;
+  sources?: InputContext["sources"];
+  template?: InputContext["template"];
   id: string;
   state: string;
   original?: string;
@@ -63,12 +69,16 @@ export default function Workbench() {
   const [action, setAction] = useState("draft"),
     [instruction, setInstruction] = useState(""),
     [proposal, setProposal] = useState<Proposal | null>(null);
+  const [picking, setPicking] = useState(false),
+    [inputContext, setInputContext] = useState<InputContext | null>(null);
+  const [searchQuery, setSearchQuery] = useState(""),
+    [searchResults, setSearchResults] = useState<any[]>([]);
   const [preview, setPreview] = useState(false),
     [settings, setSettings] = useState(false),
     [provider, setProvider] = useState({
       base_url: "https://api.openai.com/v1",
       model: "",
-      api_key: "",
+      key_configured: false,
       timeout: 60,
     });
   const [history, setHistory] = useState<any[]>([]),
@@ -81,6 +91,23 @@ export default function Workbench() {
   currentRef.current = current;
   const fail = (e: unknown) => setError((e as Error).message || String(e));
   const loadDocs = async () => setDocs(await api("/documents"));
+  const openSource = async (sourceId: string, chunkId?: string) => {
+    try {
+      const s = await api(
+        `/documents/${currentRef.current!.id}/sources/${sourceId}`,
+      );
+      setSourceText({ ...s, focused_chunk_id: chunkId });
+      setTab("sources");
+    } catch (e) {
+      fail(e);
+    }
+  };
+  useEffect(() => {
+    if (sourceText?.focused_chunk_id && tab === "sources")
+      document
+        .getElementById(`source-chunk-${sourceText.focused_chunk_id}`)
+        ?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [sourceText, tab]);
   const refreshQueue = () => {
     const q = queue.current;
     if (q) {
@@ -151,6 +178,9 @@ export default function Workbench() {
       setEpoch((x) => x + 1);
       setSelection(null);
       setProposal(null);
+      setInputContext(null);
+      setSearchResults([]);
+      setSearchQuery("");
       setSourceText(null);
       setSources(await api(`/documents/${identifier}/sources`));
       refreshQueue();
@@ -198,7 +228,18 @@ export default function Workbench() {
     const handle = setInterval(() => {
       api<Proposal>(`/documents/${current.id}/proposals/${proposal.id}`)
         .then((p) => {
-          if (!cancelled) setProposal(p);
+          if (!cancelled) {
+            setProposal(p);
+            if (p.document_context !== undefined && p.sources) {
+              setInputContext({
+                base_revision: p.base_revision,
+                original: p.original || "",
+                document_context: p.document_context,
+                sources: p.sources,
+                template: p.template,
+              });
+            }
+          }
         })
         .catch(fail);
     }, 700);
@@ -275,7 +316,7 @@ export default function Workbench() {
       const doc = queue.current!.base;
       if (!["outline", "draft"].includes(action) && !selection)
         throw new Error("请在同一纯文本段落中选择需要修改的文字");
-      const p = await api(`/documents/${doc.id}/proposals`, {
+      const request = {
         action,
         instruction,
         base_revision: doc.revision,
@@ -286,11 +327,50 @@ export default function Workbench() {
               end: selection!.end,
             }
           : undefined),
-      });
+      };
+      setInputContext(
+        await api(`/documents/${doc.id}/writing-context`, request),
+      );
+      const p = await api(`/documents/${doc.id}/proposals`, request);
       setProposal(p);
     } catch (e) {
       fail(e);
     }
+  };
+  const inspectInput = async () => {
+    try {
+      await save();
+      const doc = queue.current!.base;
+      setInputContext(
+        await api(`/documents/${doc.id}/writing-context`, {
+          action,
+          instruction,
+          base_revision: doc.revision,
+          ...(!["draft", "outline"].includes(action) && selection
+            ? {
+                node_id: selection.node_id,
+                start: selection.start,
+                end: selection.end,
+              }
+            : {}),
+        }),
+      );
+    } catch (e) {
+      fail(e);
+    }
+  };
+  const useTemplate = async (t: Template) => {
+    if (queue.current?.dirty) await save();
+    const created = await api<Document>("/documents", { title: t.title });
+    await openDoc(created.id);
+    if (queue.current?.base.id !== created.id)
+      throw new Error("无法打开新文稿，未应用模板");
+    await transact([
+      { type: "snapshot", content: t.content },
+      { type: "metadata", title: t.title, layout: t.layout, template_id: t.id },
+    ]);
+    setEpoch((x) => x + 1);
+    setTab("ai");
   };
   const accept = async () => {
     try {
@@ -357,6 +437,7 @@ export default function Workbench() {
       const snapshot = {
         schema_version: 1,
         title: `${q.base.title.slice(0, 180)}（恢复副本）`,
+        template_id: q.base.template_id,
         content: q.draft,
         layout: q.base.layout,
       };
@@ -436,6 +517,9 @@ export default function Workbench() {
         <button className="primary new-doc" onClick={create}>
           ＋ 新建文章
         </button>
+        <button className="template-entry" onClick={() => setPicking(true)}>
+          从模板创建
+        </button>
         <label className="import-button">
           ↑ 导入文档
           <input
@@ -509,6 +593,11 @@ export default function Workbench() {
         </footer>
       </aside>
       <section className="workspace">
+        {process.env.NEXT_PUBLIC_WENYUAN_DEMO_MODEL === "simulated" && (
+          <div className="demo-disclosure">
+            合成资料演示 · 模拟模型（不作为真实模型验收）
+          </div>
+        )}
         <header className="workspace-header">
           <div className="breadcrumb">
             写作空间 <span>/</span> {current?.title || "开始新的创作"}
@@ -631,6 +720,12 @@ export default function Workbench() {
             >
               历史
             </button>
+            <button
+              className={tab === "checks" ? "active" : ""}
+              onClick={() => setTab("checks")}
+            >
+              检查
+            </button>
           </div>
           {tab === "ai" && (
             <div className="panel-body">
@@ -667,6 +762,12 @@ export default function Workbench() {
                   </small>
                   <p>{selection.text}</p>
                 </div>
+              )}
+              <button onClick={inspectInput} disabled={!instruction.trim()}>
+                查看本轮输入
+              </button>
+              {inputContext && (
+                <WritingContext context={inputContext} onSource={openSource} />
               )}
               <button
                 className="primary"
@@ -750,11 +851,7 @@ export default function Workbench() {
                           key={i}
                           onClick={async () => {
                             try {
-                              const s = await api(
-                                `/documents/${current.id}/sources/${c.source_id}`,
-                              );
-                              setSourceText(s);
-                              setTab("sources");
+                              await openSource(c.source_id, c.chunk_id);
                             } catch (e) {
                               fail(e);
                             }
@@ -823,6 +920,41 @@ export default function Workbench() {
           {tab === "sources" && (
             <div className="panel-body">
               <h2>资料与依据</h2>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  try {
+                    setSearchResults(
+                      await api(
+                        `/documents/${current.id}/search?q=${encodeURIComponent(searchQuery)}`,
+                      ),
+                    );
+                  } catch (e) {
+                    fail(e);
+                  }
+                }}
+              >
+                <label>
+                  检索资料
+                  <input
+                    aria-label="检索资料"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </label>
+                <button>检索</button>
+              </form>
+              {searchResults.map((s) => (
+                <button
+                  key={s.id}
+                  className="citation"
+                  onClick={() => openSource(s.source_id, s.id)}
+                >
+                  {s.name} · 片段 #{s.ordinal}
+                  <q>{s.text}</q>
+                  <span>打开此片段</span>
+                </button>
+              ))}
               <p className="muted">
                 每份资料保留原件、内容版本和实际分片。首版采用本地字面检索，不需要向量模型。
               </p>
@@ -894,7 +1026,15 @@ export default function Workbench() {
                     下载原件
                   </button>
                   {sourceText.chunks.map((c: any) => (
-                    <div key={c.id} className="chunk">
+                    <div
+                      key={c.id}
+                      id={`source-chunk-${c.id}`}
+                      className={
+                        sourceText.focused_chunk_id === c.id
+                          ? "chunk focused"
+                          : "chunk"
+                      }
+                    >
                       <small>
                         片段 #{c.ordinal} · {c.id.slice(0, 8)}
                       </small>
@@ -922,6 +1062,7 @@ export default function Workbench() {
                           type: "metadata",
                           title: h.body.title,
                           layout: h.body.layout,
+                          template_id: h.body.template_id ?? null,
                         },
                       ])
                         .then(() => setEpoch((x) => x + 1))
@@ -940,6 +1081,18 @@ export default function Workbench() {
               ))}
             </div>
           )}
+          {tab === "checks" && (
+            <ChecksPanel
+              key={current.id}
+              document={current}
+              onSave={async () => {
+                await save();
+                return queue.current!.base;
+              }}
+              onLocate={(id) => editor.current?.focusNode(id)}
+              onError={fail}
+            />
+          )}
         </aside>
       )}
       {preview && current && content && (
@@ -951,6 +1104,13 @@ export default function Workbench() {
             setPreview(false);
             setTimeout(() => editor.current?.focusNode(identifier, offset), 0);
           }}
+        />
+      )}
+      {picking && (
+        <TemplatePicker
+          onUse={useTemplate}
+          onClose={() => setPicking(false)}
+          onError={fail}
         />
       )}
       {settings && (
@@ -990,21 +1150,27 @@ export default function Workbench() {
                 }
               />
             </label>
-            <label>
-              API 密钥
-              <input
-                aria-label="API 密钥"
-                type="password"
-                value={provider.api_key}
-                onChange={(e) =>
-                  setProvider({ ...provider, api_key: e.target.value })
-                }
-              />
-            </label>
+            <p className="notice">
+              服务端密钥：
+              {provider.key_configured
+                ? "已配置"
+                : "未配置（无密钥本地模型可用）"}
+              。密钥仅通过服务端 configure-provider 命令设置，页面不接收密钥。
+            </p>
             <button
               onClick={async () => {
                 try {
-                  setProvider(await api("/provider", provider, "PUT"));
+                  setProvider(
+                    await api(
+                      "/provider",
+                      {
+                        base_url: provider.base_url,
+                        model: provider.model,
+                        timeout: provider.timeout,
+                      },
+                      "PUT",
+                    ),
+                  );
                   setStatus("模型配置已保存");
                 } catch (e) {
                   fail(e);

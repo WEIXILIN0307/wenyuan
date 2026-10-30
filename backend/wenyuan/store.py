@@ -123,9 +123,11 @@ class Store:
         with self.connect() as db:
             return self._get(db, owner, identifier)
 
-    def create(self, owner, title="未命名文章", content=None, layout=None, original=None):
+    def create(self, owner, title="未命名文章", content=None, layout=None, original=None, template_id=None):
         body = {"title": title, "content": content or blank(), "layout": layout or Layout().model_dump()}
         body = apply_operations(body, [{"type": "metadata", "title": title, "layout": body["layout"]}])
+        if template_id is not None:
+            body = apply_operations(body, [{"type": "metadata", "template_id": template_id}])
         identifier, stamp = uid(), now()
         with self.connect(True) as db:
             db.execute(
@@ -194,6 +196,8 @@ class Store:
                 (tx.operation_id, owner, identifier, req_hash, "received", stamp),
             )
             body = {k: current[k] for k in ("title", "content", "layout")}
+            if "template_id" in current:
+                body["template_id"] = current["template_id"]
             edited = apply_operations(body, tx.operations)
             db.execute(
                 "UPDATE operations SET state='executed',executed=? WHERE owner=? AND id=?",
@@ -270,17 +274,20 @@ class Store:
             row = db.execute("SELECT * FROM providers WHERE owner=?", (owner,)).fetchone()
             if not row:
                 return None
-            return {
+            result = {
                 **json.loads(row["body"]),
-                "api_key": self.cipher.decrypt(row["encrypted_key"].encode()).decode()
-                if private
-                else ("********" if row["encrypted_key"] else ""),
             }
+            key = self.cipher.decrypt(row["encrypted_key"].encode()).decode()
+            if private:
+                result["api_key"] = key
+            else:
+                result["key_configured"] = bool(key)
+            return result
 
     def save_provider(self, owner, body):
         key = body.pop("api_key")
         old = self.provider(owner, True)
-        if key == "********":
+        if key is None:
             key = old["api_key"] if old else ""
         with self.connect(True) as db:
             db.execute(
