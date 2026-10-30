@@ -1,7 +1,7 @@
 # 种子计划增量验证（2026-10-30）
 
 原基线 `92c5134`；功能提交 `c7d2084`（模板/输入/资料/检查）与 `f68770e`
-（可选本地思考模式、表格光标修复）。本文件后续提交仅整理文档和忽略规则。
+（可选本地思考模式、表格光标修复）。本文件后续提交仅整理文档和忽略规则。最终完整干净安装验证基线为 `441f806`。
 旧记录 [VALIDATION](VALIDATION.md) 保留初始状态，本文件记录获授权后的增量验证。
 
 环境：Linux x86_64 / Xeon Gold 6226R / Python 3.12.13 / Node 24.11.1 / pnpm 10.17.1；
@@ -31,6 +31,15 @@ Chromium 148.0.7778.96、1600×1000、系统 Noto CJK 字体，共享开发主�
 | Office PDF 对照 | `libreoffice -env:UserInstallation=file:///tmp/wenyuan-final-export-render118 --headless --convert-to pdf --outdir demo-materials demo-materials/exported-demo.docx`；`pdftotext -layout ...` | **1 页 A4**，标题、正文、列表与每格文字齐全；实际 GUI 与 PDF 图像见本地材料 |
 | 媒体完整性 | `python -S grant-private/check_media.py`（ffprobe + FFmpeg 全片解码）；抽帧视觉核对 | H.264、尺寸、时长、全片解码通过；67s、101s 等关键画面文字可读。未声称人工完整观看或多播放器验收 |
 | 密钥/私有文件 | `gitleaks git --redact=100 --report-format json .`（8.30.1）；已跟踪文件与已知凭据/联系方式精确比较 | 功能提交后 8 个独立提交，**0 findings**；无已知模型密钥、提供的电话/邮箱、表单或新媒体进入 Git。扫描不代表绝对保证 |
+
+## 干净安装 CI
+
+[GitHub Actions 41073316416](https://github.com/WEIXILIN0307/wenyuan/actions/runs/41073316416)
+在提交 **`441f8067c4362c13b6d59b277c35447c2eb037bc`** 全部通过：Ubuntu 托管 runner、
+Python 3.12、Node 22，`scripts/setup.sh` 干净安装，ruff、后端完整 **62 passed / 5.63s**、
+前端类型/单测/生产构建、完整浏览器 **8 passed / 46.7s**。CI 中模型为明确的测试模拟器，
+不使用开发主机凭据，不代替上表的真实本地模型验收。之后仅补记本文与 README，
+以 `[skip ci]` 提交，未变更应用代码。上表保留本地分批结果，不把它们相加冒充一次全跑。
 
 ## 发现、修复与范围
 

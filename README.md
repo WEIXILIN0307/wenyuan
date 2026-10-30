@@ -5,7 +5,7 @@
 
 这是可运行的 0.1 开发版本，**尚未完成全部首期发布验收**。本轮增量对照见
 [功能对照](docs/SEED_GAP_ANALYSIS.md)。真实模型、系统输入法和
-Office 人工兼容性验收状态见 [验证记录](docs/VALIDATION.md)，不把模拟测试算作真实
+Office 人工兼容性验收状态见 [验证记录](docs/SEED_VALIDATION.md)，不把模拟测试算作真实
 模型验证，不承诺任意 DOCX 无损往返。不包含或下载完整 Office 引擎。
 
 ## 快速启动
@@ -88,7 +88,7 @@ pnpm build
 
 浏览器测试启动隔离的 API 和 Next.js，使用新建临时数据库和合成资料；不使用旧项目
 账号/模型/生产数据。已有 Chromium 可用 `WENYUAN_CHROMIUM=/绝对路径` 指定。
-实际命令、实测环境、已知缺口和发布门槛统一维护在 [VALIDATION](docs/VALIDATION.md)。
+实际命令、实测环境、已知缺口和发布门槛见 [本轮验证](docs/SEED_VALIDATION.md) 与 [历史基线](docs/VALIDATION.md)。
 
 ## 目录与设计
 
