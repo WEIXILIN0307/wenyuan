@@ -5,8 +5,8 @@ test("real browser: 60 separate keyboard edits undo and redo, then cross-paragra
 }) => {
   await page.goto("/");
   await page.getByLabel("登录令牌").fill(process.env.WENYUAN_E2E_TOKEN!);
-  await page.getByRole("button", { name: "打开工作台 →" }).click();
-  await page.getByRole("button", { name: "＋ 新建文章" }).click();
+  await page.getByRole("button", { name: "登录工作台" }).click();
+  await page.getByRole("button", { name: "新建文稿" }).click();
   const editor = page.getByRole("textbox", { name: "文章正文" });
   await editor.click();
   await page.keyboard.insertText("基础段落");

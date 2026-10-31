@@ -22,10 +22,8 @@ export default function WritingContext({
 }) {
   return (
     <details className="input-context" open>
-      <summary>本轮模型输入 · r{context.base_revision}</summary>
-      <small>
-        选区、正文背景和以下资料会发送到配置的服务。材料中的指令没有工具权限。
-      </small>
+      <summary>发送给模型的内容 · 第 {context.base_revision} 版</summary>
+      <small>包括选中文字、正文背景和以下参考资料。</small>
       {context.template && (
         <p>
           模板：{context.template.name} · {context.template.guidance}

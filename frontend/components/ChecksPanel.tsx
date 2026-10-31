@@ -27,10 +27,8 @@ export default function ChecksPanel({
     [busy, setBusy] = useState(false);
   return (
     <div className="panel-body">
-      <h2>可解释检查</h2>
-      <p className="muted">
-        核对明确的结构、日历和来源规则；不生成综合质量分。
-      </p>
+      <h2>文稿检查</h2>
+      <p className="muted">核对日期、必要章节和引用来源。</p>
       <button
         disabled={busy}
         onClick={async () => {
@@ -60,9 +58,7 @@ export default function ChecksPanel({
               : ""}
           </p>
           {report.issues.length === 0 ? (
-            <p className="notice">
-              这些规则未发现问题；仍需人工审核事实和表达。
-            </p>
+            <p className="notice">未发现规则内的问题。请继续核对事实和表述。</p>
           ) : (
             report.issues.map((i, n) => (
               <article className="check-card" key={n}>

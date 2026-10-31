@@ -14,7 +14,7 @@ playwright-report/
 next-env.d.ts
 /青年开源*.docx
 /grant-private/
-/demo-materials/
+/demo-materials
 .uv-cache
 
 # Office lock files can contain local account and host details.

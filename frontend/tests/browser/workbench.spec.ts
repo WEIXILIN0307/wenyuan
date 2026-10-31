@@ -4,11 +4,11 @@ import { resolve } from "node:path";
 async function login(page: Page) {
   await page.goto("/");
   await page.getByLabel("登录令牌").fill(process.env.WENYUAN_E2E_TOKEN!);
-  await page.getByRole("button", { name: "打开工作台 →" }).click();
-  await expect(page.getByRole("button", { name: "＋ 新建文章" })).toBeVisible();
+  await page.getByRole("button", { name: "登录工作台" }).click();
+  await expect(page.getByRole("button", { name: "新建文稿" })).toBeVisible();
 }
 async function create(page: Page) {
-  await page.getByRole("button", { name: "＋ 新建文章" }).click();
+  await page.getByRole("button", { name: "新建文稿" }).click();
   await expect(page.getByRole("textbox", { name: "文章正文" })).toBeVisible();
 }
 async function saved(page: Page) {
@@ -39,12 +39,15 @@ test("create, edit Chinese/emoji, heading outline, save, refresh, rename and exp
   await page.getByRole("button", { name: /浏览器合成验收/ }).click();
   await expect(editor).toContainText("这是一篇人工构造的测试文章。");
   const file = page.waitForEvent("download");
-  await page.getByRole("button", { name: "导出 DOCX ↓" }).click();
+  await page.getByRole("button", { name: "导出 DOCX" }).click();
   expect((await file).suggestedFilename()).toBe("浏览器合成验收.docx");
   await page.getByRole("button", { name: "分页预览", exact: true }).click();
   await expect(page.locator(".preview-page")).toHaveCount(1);
   await page.getByRole("button", { name: "关闭", exact: true }).click();
-  await page.screenshot({ path: "test-results/workbench.png", fullPage: true });
+  await page.screenshot({
+    path: test.info().outputPath("workbench.png"),
+    fullPage: true,
+  });
 });
 
 test("save failure is visible; local recovery survives refresh and retries", async ({
@@ -179,9 +182,9 @@ test("paste text, simple table, image, sources and actual unavailable-model mess
   await expect(page.locator(".source-card")).toContainText("合成资料.txt");
   await page.getByRole("button", { name: "查看片段/原件" }).click();
   await expect(page.locator(".chunk")).toContainText("社区图书室");
-  await page.getByRole("button", { name: "✧ 写作助手" }).click();
+  await page.getByRole("button", { name: "写作助手" }).click();
   await page.getByLabel("写作要求").fill("根据合成阅读资料起草通知");
-  await page.getByRole("button", { name: "✧ 生成修改建议" }).click();
+  await page.getByRole("button", { name: "生成建议" }).click();
   await expect(page.locator(".proposal")).toContainText("尚未配置模型服务");
   await expect(page.locator(".ProseMirror")).not.toContainText("假草稿");
 });
@@ -262,12 +265,12 @@ test("HTTP simulator: preview, reject, accept, repeated text targeting and stale
   await selectLast();
   await page.getByLabel("写作任务").selectOption("rewrite");
   await page.getByLabel("写作要求").fill("测试模拟器：改写选区");
-  await page.getByRole("button", { name: "✧ 生成修改建议" }).click();
+  await page.getByRole("button", { name: "生成建议" }).click();
   await expect(page.locator(".proposal")).toContainText("待确认");
   await expect(page.locator(".ProseMirror")).not.toContainText("模拟提供商");
   await page.getByRole("button", { name: "拒绝", exact: true }).click();
   await expect(page.locator(".proposal")).toContainText("已拒绝");
-  await page.getByRole("button", { name: "✧ 生成修改建议" }).click();
+  await page.getByRole("button", { name: "生成建议" }).click();
   await expect(page.locator(".proposal")).toContainText("待确认");
   await page.getByRole("button", { name: "确认应用" }).click();
   await expect(page.locator(".ProseMirror p").first()).toHaveText("重复原文");
@@ -285,7 +288,7 @@ test("HTTP simulator: preview, reject, accept, repeated text targeting and stale
       selection.addRange(range);
     });
   await page.getByLabel("写作要求").fill("测试模拟器延迟：改写选区");
-  await page.getByRole("button", { name: "✧ 生成修改建议" }).click();
+  await page.getByRole("button", { name: "生成建议" }).click();
   await page.locator(".ProseMirror p").first().click();
   await page.keyboard.press("End");
   await page.keyboard.insertText("人工作出的新修改");
@@ -331,9 +334,9 @@ test("original preset, explainable checks, exact source navigation and actual in
   await page.getByRole("button", { name: "检索", exact: true }).click();
   await page.getByRole("button", { name: /打开此片段/ }).click();
   await expect(page.locator(".chunk.focused")).toContainText("星期五");
-  await page.getByRole("button", { name: "✧ 写作助手" }).click();
+  await page.getByRole("button", { name: "写作助手" }).click();
   await page.getByLabel("写作要求").fill("依据合成阅读活动资料生成通知");
-  await page.getByRole("button", { name: "查看本轮输入" }).click();
+  await page.getByRole("button", { name: "查看发送内容" }).click();
   await expect(page.locator(".input-context")).toContainText("模板：通知");
   await expect(page.locator(".input-context .citation")).toContainText(
     "社区图书室",

@@ -481,9 +481,8 @@ export default function Workbench() {
             }
           }}
         >
-          <div className="brand-mark">文</div>
           <h1>文渊</h1>
-          <p>让每一篇文字，清楚而有据。</p>
+          <p>登录本地写作工作台</p>
           <label>
             登录令牌
             <input
@@ -494,8 +493,8 @@ export default function Workbench() {
               required
             />
           </label>
-          <button className="primary">打开工作台 →</button>
-          <small>本地管理员通过 create-user 命令生成令牌</small>
+          <button className="primary">登录工作台</button>
+          <small>使用本机管理员提供的登录令牌。</small>
           {error && (
             <p role="alert" className="error">
               {error}
@@ -508,34 +507,32 @@ export default function Workbench() {
     <main className="workbench">
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-mark">文</span>
-          <div>
-            <b>文渊</b>
-            <small>写作，始于清晰</small>
-          </div>
-          <span className="badge">0.1</span>
+          <b>文渊</b>
+          <span className="version">v0.1</span>
         </div>
         <button className="primary new-doc" onClick={create}>
-          ＋ 新建文章
+          新建文稿
         </button>
-        <button className="template-entry" onClick={() => setPicking(true)}>
-          从模板创建
-        </button>
-        <label className="import-button">
-          ↑ 导入文档
-          <input
-            aria-label="导入文档"
-            type="file"
-            accept=".md,.txt,.json,.docx"
-            disabled={busy}
-            onChange={(e) => {
-              upload(e.target.files?.[0]);
-              e.target.value = "";
-            }}
-          />
-        </label>
+        <div className="sidebar-actions">
+          <button className="template-entry" onClick={() => setPicking(true)}>
+            从模板创建
+          </button>
+          <label className="import-button">
+            导入文档
+            <input
+              aria-label="导入文档"
+              type="file"
+              accept=".md,.txt,.json,.docx"
+              disabled={busy}
+              onChange={(e) => {
+                upload(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+          </label>
+        </div>
         <div className="section-label">
-          我的文章 <span>{docs.length}</span>
+          文稿 <span>{docs.length}</span>
         </div>
         <nav className="doc-list">
           {docs.map((d) => (
@@ -544,7 +541,6 @@ export default function Workbench() {
               className={current?.id === d.id ? "doc-item active" : "doc-item"}
               onClick={() => openDoc(d.id)}
             >
-              <span>▤</span>
               <div>
                 <b>{d.title}</b>
                 <small>
@@ -574,7 +570,7 @@ export default function Workbench() {
           </div>
         )}
         <footer>
-          <span>● 单机工作区 · {user}</span>
+          <span title={user}>本地工作区 · {user}</span>
           <button
             onClick={async () => {
               try {
@@ -601,7 +597,7 @@ export default function Workbench() {
         )}
         <header className="workspace-header">
           <div className="breadcrumb">
-            写作空间 <span>/</span> {current?.title || "开始新的创作"}
+            文稿 <span>/</span> {current?.title || "未选择文稿"}
           </div>
           <div className="header-actions">
             {current && (
@@ -617,10 +613,10 @@ export default function Workbench() {
                 <button onClick={() => save().catch(() => {})}>保存</button>
                 <button onClick={() => setPreview(true)}>分页预览</button>
                 <button onClick={() => exportFile("docx")} className="primary">
-                  导出 DOCX ↓
+                  导出 DOCX
                 </button>
                 <button aria-label="文档设置" onClick={() => setSettings(true)}>
-                  ⚙
+                  设置
                 </button>
               </>
             )}
@@ -660,8 +656,7 @@ export default function Workbench() {
                 }}
               />
               <div>
-                <span>原生 JSON</span>
-                <span>修订 r{current.revision}</span>
+                <span>第 {current.revision} 版</span>
                 <span>{textOf(content).length.toLocaleString()} 字符</span>
               </div>
             </div>
@@ -678,25 +673,24 @@ export default function Workbench() {
             </div>
             <footer className="editor-footer">
               <span>修改自动保存 · Ctrl/⌘ Z 撤销</span>
-              <span>
-                页面 · {current.layout.width} × {current.layout.height}px
-              </span>
+              <span>{sources.length} 份参考资料</span>
             </footer>
           </>
         ) : (
           <div className="empty">
-            <span className="empty-art">文</span>
-            <p className="eyebrow">一处安静的写作空间</p>
-            <h1>把想法，写成文章。</h1>
+            <h1>{docs.length ? "未打开文稿" : "开始写作"}</h1>
             <p>
-              整理资料、勾勒提纲、认真落笔。
-              <br />
-              每次 AI 修改，都由你审阅和决定。
+              {docs.length
+                ? "从左侧打开一篇文稿，或创建新文稿。"
+                : "创建空白文稿，也可以从模板开始。"}
             </p>
-            <button className="primary" onClick={create}>
-              创建第一篇文章 →
-            </button>
-            <small>支持中文文章 · 公文 · 长文档</small>
+            <div className="empty-actions">
+              <button className="primary" onClick={create}>
+                创建空白文稿
+              </button>
+              <button onClick={() => setPicking(true)}>使用模板</button>
+            </div>
+            <small>可导入 DOCX、Markdown、TXT 或文渊 JSON 文件。</small>
           </div>
         )}
       </section>
@@ -707,7 +701,7 @@ export default function Workbench() {
               className={tab === "ai" ? "active" : ""}
               onClick={() => setTab("ai")}
             >
-              ✧ 写作助手
+              写作助手
             </button>
             <button
               className={tab === "sources" ? "active" : ""}
@@ -731,9 +725,8 @@ export default function Workbench() {
           {tab === "ai" && (
             <div className="panel-body">
               <div className="assistant-intro">
-                <span>✧</span>
-                <h2>一起推敲，写得更好</h2>
-                <p>从主题到草稿，从一句到一篇。</p>
+                <h2>写作助手</h2>
+                <p>选择任务并填写要求，结果先供你审阅。</p>
               </div>
               <label>
                 写作任务
@@ -751,7 +744,7 @@ export default function Workbench() {
               <label>
                 写作要求
                 <textarea
-                  placeholder="例如：基于资料，起草一份社区阅读活动通知，语气简明。"
+                  placeholder="说明要写什么、参考哪些资料，或如何修改选中文字。"
                   value={instruction}
                   onChange={(e) => setInstruction(e.target.value)}
                 />
@@ -765,7 +758,7 @@ export default function Workbench() {
                 </div>
               )}
               <button onClick={inspectInput} disabled={!instruction.trim()}>
-                查看本轮输入
+                查看发送内容
               </button>
               {inputContext && (
                 <WritingContext context={inputContext} onSource={openSource} />
@@ -777,10 +770,10 @@ export default function Workbench() {
                 }
                 onClick={generate}
               >
-                ✧ 生成修改建议
+                生成建议
               </button>
               <p className="disclosure">
-                文稿选区和检索片段可能发送到你配置的模型服务商。结果供人工审核；不会自动覆盖正文。
+                文稿和检索资料将发送至配置的模型服务。建议需确认后写入。
               </p>
               <button
                 className="text-button"
@@ -794,7 +787,7 @@ export default function Workbench() {
                   }
                 }}
               >
-                配置模型服务 ↗
+                模型设置
               </button>
               {proposal && (
                 <article className="proposal">
@@ -863,9 +856,14 @@ export default function Workbench() {
                         </button>
                       ))}
                       {proposal.usage && (
-                        <small>
-                          服务端用量：{JSON.stringify(proposal.usage)}
-                        </small>
+                        <details className="model-usage">
+                          <summary>调用用量</summary>
+                          <small>
+                            输入 {proposal.usage.prompt_tokens ?? "未返回"} ·
+                            输出 {proposal.usage.completion_tokens ?? "未返回"}{" "}
+                            token
+                          </small>
+                        </details>
                       )}
                     </>
                   )}
@@ -957,10 +955,10 @@ export default function Workbench() {
                 </button>
               ))}
               <p className="muted">
-                每份资料保留原件、内容版本和实际分片。首版采用本地字面检索，不需要向量模型。
+                上传后可检索并查看原文。支持 TXT、Markdown、DOCX 和文渊 JSON。
               </p>
               <label className="import-button">
-                ＋ 上传资料
+                上传资料
                 <input
                   aria-label="上传资料"
                   type="file"
@@ -1014,9 +1012,7 @@ export default function Workbench() {
                 </article>
               ))}
               {!sources.length && (
-                <p className="muted">
-                  还没有资料。可上传 examples 中的合成材料。
-                </p>
+                <p className="muted">暂无参考资料。上传后可在写作时引用。</p>
               )}
               {sourceText && (
                 <article>
@@ -1049,7 +1045,7 @@ export default function Workbench() {
           {tab === "history" && (
             <div className="panel-body">
               <h2>版本与操作记录</h2>
-              <p className="muted">恢复版本会创建新修订，不改写旧记录。</p>
+              <p className="muted">恢复后另存为新版本，原有记录保留。</p>
               {history.map((h) => (
                 <article className="history-card" key={h.revision}>
                   <b>修订 r{h.revision}</b>

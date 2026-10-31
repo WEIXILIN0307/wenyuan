@@ -27,14 +27,12 @@ export default function TemplatePicker({
   }, []);
   return (
     <div className="modal-overlay">
-      <section className="settings-modal">
+      <section className="settings-modal template-picker">
         <header>
           <h2>选择写作模板</h2>
           <button onClick={onClose}>关闭</button>
         </header>
-        <p className="muted">
-          4 个原创写作预设，包含章节、标题样式和基础页面参数。使用后创建新文稿。
-        </p>
+        <p className="muted">选择模板以创建新文稿，章节与内容均可修改。</p>
         <div className="template-grid">
           {items.map((t) => (
             <article className="template-card" key={t.id}>
@@ -45,7 +43,6 @@ export default function TemplatePicker({
                 正文 {t.layout.font_size}px · 页边距 {t.layout.margin}px
               </small>
               <button
-                className="primary"
                 disabled={busy}
                 onClick={async () => {
                   setBusy(true);
@@ -61,10 +58,12 @@ export default function TemplatePicker({
               >
                 使用{t.name}模板
               </button>
-              <small>{t.notice}</small>
             </article>
           ))}
         </div>
+        <p className="template-notice">
+          项目原创示例，不附带字体，不作为法定公文格式认证。
+        </p>
       </section>
     </div>
   );

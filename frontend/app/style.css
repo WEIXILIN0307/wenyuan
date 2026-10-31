@@ -1,13 +1,15 @@
 @import "prosemirror-view/style/prosemirror.css";
 @import "prosemirror-tables/style/tables.css";
 :root {
-  --ink: #263b36;
-  --muted: #78857e;
-  --line: #e3e8e2;
-  --green: #28634d;
-  --wash: #f5f7f3;
+  --ink: #262a31;
+  --muted: #666b73;
+  --line: #dedfdf;
+  --accent: #984b3c;
+  --wash: #f5f5f3;
   --paper: #fff;
-  --sans: Inter, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  --sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans CJK SC",
+    "Microsoft YaHei", sans-serif;
 }
 * {
   box-sizing: border-box;
@@ -22,23 +24,32 @@ button,
 input,
 textarea,
 select {
-  font: inherit;
-  color: inherit;
+  border: 1px solid #cfd1d3;
+  border-radius: 3px;
+  background: #fff;
+  padding: 8px 10px;
+  min-width: 0;
 }
 button,
 .file-button,
 .import-button {
-  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 7px 10px;
+  color: var(--ink);
+  background: #fff;
+  text-align: center;
 }
 button {
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: 3px;
   background: #fff;
   padding: 6px 11px;
-  transition: background 0.15s;
 }
 button:hover {
-  background: #eff4ef;
+  background: #f0f0ee;
 }
 button:disabled {
   opacity: 0.45;
@@ -56,8 +67,9 @@ select {
 input:focus,
 textarea:focus,
 select:focus {
-  outline: 2px solid #80aa9060;
-  border-color: #7ba68c;
+  outline: 2px solid #56647740;
+  outline-offset: 1px;
+  border-color: #79828e;
 }
 label {
   display: flex;
@@ -91,25 +103,18 @@ h3 {
   margin-top: 20px;
 }
 .primary {
-  background: var(--green);
-  border-color: var(--green);
+  background: #343940;
+  border-color: #343940;
   color: #fff;
 }
 .primary:hover {
-  background: #204f3d;
+  background: #20252c;
 }
 .text-button {
   border: 0;
   background: transparent;
-  color: var(--green);
+  color: var(--accent);
   padding-left: 0;
-}
-.badge {
-  border: 1px solid #d3dfd2;
-  border-radius: 4px;
-  font-size: 10px;
-  padding: 0 4px;
-  color: #738673;
 }
 .muted,
 .disclosure {
@@ -136,8 +141,8 @@ h3 {
   font-size: 12px;
 }
 .notice {
-  background: #eef3ee;
-  color: #687e6c;
+  background: #f1f2f2;
+  color: #525960;
   padding: 12px;
 }
 .banner {
@@ -154,37 +159,17 @@ h3 {
   flex-shrink: 0;
   font-size: 11px;
 }
-.brand-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 40px;
-  border: 1px solid #a1b199;
-  border-radius: 10px 3px;
-  font:
-    24px "Noto Serif CJK SC",
-    serif;
-  color: var(--green);
-  background: #e5edde;
-}
 .brand {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 27px 20px 30px;
+  align-items: baseline;
+  gap: 10px;
+  padding: 23px 20px;
+  margin-bottom: 5px;
 }
 .brand b {
-  font:
-    600 23px "Noto Serif CJK SC",
-    serif;
-}
-.brand small {
-  font-size: 10px;
-  letter-spacing: 2px;
-}
-.brand .badge {
-  margin-left: auto;
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: 1px;
 }
 .workbench {
   display: flex;
@@ -193,16 +178,17 @@ h3 {
   overflow: hidden;
 }
 .sidebar {
-  width: 232px;
+  width: 216px;
   flex-shrink: 0;
-  background: #f0f3ec;
+  background: #f6f6f4;
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
 }
 .new-doc {
-  margin: 0 18px 9px;
-  padding: 10px;
+  margin: 0 16px 8px;
+  padding: 9px 12px;
+  text-align: left;
 }
 .import-button {
   border: 1px dashed #b8cbb8;
@@ -213,20 +199,16 @@ h3 {
   background: #f8faf6;
   text-align: center;
 }
-.sidebar > .import-button {
-  margin: 0 18px 28px;
-}
 .file-button input,
 .import-button input {
   display: none;
 }
 .section-label {
-  font-size: 11px;
-  color: #86927f;
-  letter-spacing: 1px;
+  font-size: 12px;
+  color: var(--muted);
   display: flex;
   justify-content: space-between;
-  margin: 0 22px 12px;
+  margin: 0 20px 10px;
 }
 .doc-list {
   overflow: auto;
@@ -235,18 +217,14 @@ h3 {
 }
 .doc-item {
   display: flex;
-  align-items: center;
-  gap: 10px;
   text-align: left;
-  margin: 3px 10px;
-  width: calc(100% - 20px);
-  border-color: transparent;
+  margin: 0;
+  width: 100%;
+  border: 0;
+  border-left: 2px solid transparent;
+  border-radius: 0;
   background: transparent;
-  padding: 11px 12px;
-}
-.doc-item > span {
-  color: #a1aea0;
-  font-size: 21px;
+  padding: 10px 18px;
 }
 .doc-item div {
   min-width: 0;
@@ -260,8 +238,9 @@ h3 {
   text-overflow: ellipsis;
 }
 .doc-item.active {
-  background: #e0e9dc;
-  color: #2d5b42;
+  border-left-color: var(--accent);
+  background: #eaeae7;
+  color: var(--ink);
 }
 .outline {
   max-height: 28vh;
@@ -282,17 +261,18 @@ h3 {
 }
 .outline p {
   padding: 0 22px;
-  color: #99a18f;
+  color: #6b7178;
   font-size: 11px;
 }
 .sidebar footer {
   border-top: 1px solid var(--line);
-  padding: 13px 16px;
-  font-size: 10px;
-  color: #85947d;
+  padding: 12px 16px;
+  font-size: 11px;
+  color: var(--muted);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 }
 .sidebar footer button {
   font-size: 10px;
@@ -309,22 +289,22 @@ h3 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  min-height: 66px;
+  min-height: 54px;
   border-bottom: 1px solid var(--line);
-  padding: 0 24px;
-  background: #fbfcf9;
+  padding: 0 22px;
+  background: #fff;
   gap: 15px;
 }
 .breadcrumb {
-  font-size: 11px;
-  color: #8d988e;
+  font-size: 12px;
+  color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .breadcrumb span {
   margin: 0 12px;
-  color: #c1c9bf;
+  color: #c4c6ca;
 }
 .header-actions {
   display: flex;
@@ -344,14 +324,12 @@ h3 {
   color: #b26b44;
 }
 .document-heading {
-  padding: 26px 36px 19px;
+  padding: 17px 26px 14px;
   background: #fff;
   border-bottom: 1px solid var(--line);
 }
 .document-heading input {
-  font:
-    600 25px "Noto Serif CJK SC",
-    serif;
+  font: 600 20px/1.5 var(--sans);
   border: none;
   width: 100%;
   padding: 0;
@@ -359,15 +337,15 @@ h3 {
 }
 .document-heading > div {
   display: flex;
-  gap: 17px;
-  color: #9aa397;
-  font-size: 10px;
-  margin-top: 8px;
+  gap: 14px;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 5px;
 }
 .editor-scroll {
   flex: 1;
   overflow: auto;
-  background: #eef0eb;
+  background: #eceeed;
 }
 .editor-shell {
   min-width: 650px;
@@ -380,7 +358,7 @@ h3 {
   gap: 4px;
   flex-wrap: wrap;
   padding: 8px 12px;
-  background: #fafcf9f5;
+  background: #fafafaf5;
   border-bottom: 1px solid var(--line);
   align-items: center;
 }
@@ -394,11 +372,11 @@ h3 {
 }
 .toolbar button:hover,
 .toolbar select:hover {
-  background: #e4ece2;
+  background: #e8e9e8;
 }
 .toolbar i {
   height: 17px;
-  border-left: 1px solid #d7dfd5;
+  border-left: 1px solid #d6d8da;
   margin: 0 5px;
 }
 .toolbar input[type="color"] {
@@ -418,10 +396,10 @@ h3 {
   height: 25px;
 }
 .document-surface {
-  margin: 28px auto 50px;
+  margin: 24px auto 40px;
   background: white;
   min-height: 800px;
-  box-shadow: 0 2px 12px #25352308;
+  border: 1px solid #d9dbdc;
   width: calc(100% - 60px);
 }
 .ProseMirror {
@@ -455,20 +433,20 @@ h3 {
 }
 .ProseMirror td,
 .ProseMirror th {
-  border: 1px solid #bac9bc;
+  border: 1px solid #c4c7ca;
   padding: 7px;
   position: relative;
   min-width: 30px;
 }
 .ProseMirror th {
-  background: #f1f5ee;
+  background: #f3f3f1;
 }
 .ProseMirror img {
   max-width: 100%;
   object-fit: contain;
 }
 .ProseMirror a {
-  color: #367c62;
+  color: #50637d;
 }
 .ProseMirror ul,
 .ProseMirror ol {
@@ -480,59 +458,41 @@ h3 {
   border-top: 1px solid var(--line);
   padding: 6px 22px;
   font-size: 10px;
-  color: #8b988a;
-  background: #fbfcf9;
+  color: #6b7178;
+  background: #fafafa;
 }
 .empty {
   margin: auto;
-  text-align: center;
-  padding: 50px;
-  line-height: 2.2;
-}
-.empty-art {
-  font:
-    64px "Noto Serif CJK SC",
-    serif;
-  display: inline-block;
-  color: #688c6b;
-  border: 1px solid #ccdac4;
-  padding: 15px 35px;
-  background: #e9efdf;
-  border-radius: 40% 15%;
-  margin-bottom: 25px;
-}
-.empty .eyebrow {
-  font-size: 11px;
-  letter-spacing: 4px;
-  color: #8f9e86;
+  text-align: left;
+  max-width: 560px;
+  padding: 40px;
+  line-height: 1.8;
 }
 .empty h1 {
-  font:
-    500 32px/1.6 "Noto Serif CJK SC",
-    serif;
+  font: 600 24px/1.5 var(--sans);
+  margin-bottom: 12px;
 }
 .empty > p {
-  font-size: 13px;
-  color: #85917f;
+  font-size: 14px;
+  color: var(--muted);
 }
 .empty button {
-  margin: 16px 0 20px;
-  padding: 10px 24px;
+  padding: 8px 16px;
 }
 .empty small {
-  font-size: 10px;
-  letter-spacing: 1px;
+  font-size: 12px;
+  color: var(--muted);
 }
 .right-panel {
-  width: 326px;
+  width: 344px;
   flex-shrink: 0;
   border-left: 1px solid var(--line);
-  background: #fbfcf9;
+  background: #fff;
   display: flex;
   flex-direction: column;
 }
 .panel-tabs {
-  height: 66px;
+  height: 54px;
   display: flex;
   align-items: stretch;
   justify-content: space-around;
@@ -546,11 +506,12 @@ h3 {
   padding: 10px;
 }
 .panel-tabs button.active {
-  border-bottom: 2px solid var(--green);
-  color: var(--green);
+  border-bottom: 2px solid var(--accent);
+  color: var(--ink);
+  font-weight: 600;
 }
 .panel-body {
-  padding: 22px;
+  padding: 20px;
   overflow: auto;
   flex: 1;
 }
@@ -571,24 +532,21 @@ h3 {
   padding: 10px;
 }
 .assistant-intro {
-  padding: 10px 0 22px;
-}
-.assistant-intro > span {
-  font-size: 28px;
-  color: #718e65;
+  padding: 0 0 18px;
 }
 .assistant-intro h2 {
-  font-size: 16px;
-  font-weight: 500;
-  margin: 10px 0 5px;
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 5px;
 }
 .assistant-intro p {
-  color: #95a08f;
-  font-size: 11px;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 0;
 }
 .selection-card {
-  border-left: 2px solid #acc5a4;
-  background: #edf3e9;
+  border-left: 2px solid #a9adb2;
+  background: #f1f2f3;
   padding: 10px;
   margin: 0 0 16px;
 }
@@ -612,8 +570,8 @@ h3 {
 }
 .proposal-title span {
   font-size: 10px;
-  color: var(--green);
-  background: #e8f0e3;
+  color: var(--accent);
+  background: #eff0ef;
   border-radius: 4px;
   padding: 2px 5px;
 }
@@ -621,7 +579,7 @@ h3 {
   white-space: pre-wrap;
   font: 12px/1.9 var(--sans);
   padding: 10px;
-  background: #f1f4ed;
+  background: #f5f5f3;
   overflow-wrap: anywhere;
   max-height: 300px;
   overflow: auto;
@@ -653,8 +611,13 @@ h3 {
 .citation {
   text-align: left;
   width: 100%;
-  font-size: 10px;
+  font-size: 11px;
   margin: 8px 0;
+  border: 0;
+  border-left: 2px solid #d2d4d6;
+  border-radius: 0;
+  padding: 8px 10px;
+  background: #f7f7f5;
 }
 .citation q {
   display: block;
@@ -681,12 +644,12 @@ h3 {
 }
 .history-card p {
   font-size: 11px;
-  color: #8b9785;
+  color: #6c7178;
   max-height: 62px;
   overflow: hidden;
 }
 .chunk {
-  background: #f0f3ed;
+  background: #f5f5f3;
   padding: 12px;
   margin-top: 12px;
   white-space: pre-wrap;
@@ -698,22 +661,22 @@ h3 {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: #203b2e65;
+  background: #171b2459;
   z-index: 50;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 25px;
-  backdrop-filter: blur(3px);
 }
 .settings-modal,
 .preview-modal {
-  background: #f9fbf6;
-  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #d4d6d8;
+  border-radius: 4px;
   padding: 24px;
   max-height: 92vh;
   overflow: auto;
-  box-shadow: 0 20px 80px #10251c30;
+  box-shadow: 0 8px 24px #00000018;
 }
 .settings-modal {
   width: 620px;
@@ -751,7 +714,7 @@ details button {
 }
 .pages {
   overflow: auto;
-  background: #e9eee4;
+  background: #e7e9e9;
   padding: 25px;
   max-height: 70vh;
 }
@@ -767,7 +730,7 @@ details button {
 }
 .preview-cell {
   position: absolute;
-  border: 1px solid #c2cdc0;
+  border: 1px solid #c9cccf;
   padding: 8px;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -777,35 +740,30 @@ details button {
   bottom: 20px;
   left: 50%;
   font-size: 11px;
-  color: #9eaa99;
+  color: #6d747c;
 }
 .login {
   min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(ellipse at 40% 30%, #edf3e4, #f8faf5 70%);
+  background: #f4f4f2;
 }
 .login form {
-  width: 360px;
-  text-align: center;
-  padding: 35px;
-}
-.login .brand-mark {
-  width: 62px;
-  height: 64px;
-  font-size: 36px;
+  width: 380px;
+  text-align: left;
+  padding: 32px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 4px;
 }
 .login h1 {
-  font:
-    500 30px "Noto Serif CJK SC",
-    serif;
-  margin: 16px 0 8px;
-  letter-spacing: 8px;
+  font: 650 26px/1.5 var(--sans);
+  margin: 0 0 6px;
 }
 .login p {
-  color: #7d8d75;
-  font-size: 12px;
+  color: var(--muted);
+  font-size: 13px;
 }
 .login label {
   text-align: left;
@@ -874,28 +832,34 @@ details button {
   }
 }
 .template-entry {
-  margin: 0 18px 10px;
   font-size: 12px;
 }
 .template-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  display: block;
 }
 .template-card {
-  padding: 15px;
-  background: white;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr) 128px;
+  gap: 5px 16px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
 }
 .template-card h3 {
-  margin: 0 0 8px;
+  grid-column: 1;
+  grid-row: 1 / 4;
+  font-size: 15px;
+  margin: 0;
 }
 .template-card p {
+  grid-column: 2;
   font-size: 12px;
+  margin: 0;
 }
 .template-card button {
-  margin: 12px 0;
+  grid-column: 3;
+  grid-row: 1 / 4;
+  align-self: center;
+  margin: 0;
 }
 .check-card {
   margin: 15px 0;
@@ -908,10 +872,11 @@ details button {
   overflow-wrap: anywhere;
 }
 .input-context {
-  background: #eff4ec;
-  padding: 10px;
-  font-size: 11px;
-  margin: 12px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0;
+  font-size: 12px;
+  margin: 14px 0;
 }
 .input-context summary {
   cursor: pointer;
@@ -923,8 +888,8 @@ details button {
   font: 11px/1.8 var(--sans);
 }
 .chunk.focused {
-  outline: 2px solid #5e936a;
-  background: #e1edda;
+  outline: 1px solid #8a7168;
+  background: #f2ece8;
 }
 .demo-disclosure {
   background: #6a4d18;
@@ -936,4 +901,56 @@ details button {
 }
 .panel-tabs button {
   padding: 8px 5px;
+}
+
+.version {
+  color: var(--muted);
+  font-size: 11px;
+}
+.sidebar-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 0 16px 25px;
+}
+.sidebar-actions button,
+.sidebar-actions label {
+  padding: 6px 3px;
+  font-size: 12px;
+  font-weight: 400;
+}
+.sidebar footer > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.empty-actions {
+  display: flex;
+  gap: 8px;
+  margin: 22px 0;
+}
+.template-picker {
+  width: 720px;
+}
+.template-card > small {
+  grid-column: 2;
+}
+.template-notice {
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.model-usage {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 12px 0;
+}
+.model-usage summary {
+  cursor: pointer;
+}
+button:focus-visible,
+summary:focus-visible,
+.import-button:focus-within {
+  outline: 2px solid #68788b;
+  outline-offset: 2px;
 }
