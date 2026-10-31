@@ -121,8 +121,33 @@ test("Good AI retains the selected target and request across views; preview conf
     },
   });
   expect(configured.ok()).toBeTruthy();
-  await page.getByRole("button", { name: "生成建议" }).click();
+  let requests = 0;
+  page.on("request", (r) => {
+    if (r.method() === "POST" && /\/proposals$/.test(r.url())) requests++;
+  });
+  const composer = page.getByLabel("写作要求");
+  await composer.evaluate((el) =>
+    el.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Enter",
+        isComposing: true,
+        bubbles: true,
+      }),
+    ),
+  );
+  await composer.press("Shift+Enter");
+  expect(requests).toBe(0);
+  await composer.press("Enter");
   await expect(page.locator(".proposal")).toContainText("待确认");
+  expect(requests).toBe(1);
+  const box = (await page.locator(".assistant-composer").boundingBox())!;
+  expect(box.y + box.height).toBeLessThanOrEqual(1000);
+  await page.getByRole("button", { name: "资料", exact: true }).click();
+  await expect(page.locator(".writer-context-host .panel-body")).toContainText(
+    "资料与依据",
+  );
+  await expect(page.locator(".proposal")).toBeVisible();
+  await page.getByRole("button", { name: "写作助手", exact: true }).click();
   await page.getByRole("button", { name: "返回正文选取文字 →" }).click();
   await expect(page.getByRole("textbox", { name: "文章正文" })).toHaveText(
     "导航切换仍保留的合成原文",

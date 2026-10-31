@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { BookOpen, FileText, Plus, Search, UploadCloud, X } from "lucide-react";
 import { api, download } from "../lib/model";
 
 type Library = {
@@ -69,9 +70,11 @@ export default function KnowledgePage(props: Props) {
     <section className="knowledge-page" aria-label="知识库内容">
       <aside className="library-sidebar">
         <header>
-          <h2>资料库</h2>
+          <h2>
+            <BookOpen size={15} /> 知识库
+          </h2>
           <button onClick={() => setCreating(true)} aria-label="新建知识库">
-            ＋ 新建
+            <Plus size={14} /> 新建
           </button>
         </header>
         {loading && <p className="muted">正在加载…</p>}
@@ -231,7 +234,8 @@ function LibraryWorkspace({
   const [files, setFiles] = useState<Source[]>([]),
     [query, setQuery] = useState(""),
     [filter, setFilter] = useState(""),
-    [tab, setTab] = useState("files");
+    [tab, setTab] = useState("files"),
+    [status, setStatus] = useState("all");
   const [original, setOriginal] = useState<Original | null>(null),
     [focused, setFocused] = useState<string | null>(null),
     [hits, setHits] = useState<Hit[] | null>(null);
@@ -275,7 +279,12 @@ function LibraryWorkspace({
       setOriginal(await api<Original>(`${prefix}/sources/${id}`));
       setFocused(chunk || null);
     });
-  const filtered = files.filter((f) => f.name.includes(filter.trim()));
+  const filtered = files.filter(
+    (f) =>
+      f.name.includes(filter.trim()) &&
+      (status === "all" ||
+        (status === "ready" ? f.chunks > 0 : f.chunks === 0)),
+  );
   return (
     <>
       <header className="page-heading">
@@ -284,34 +293,6 @@ function LibraryWorkspace({
           <p>{library.description || "管理可核对原文的写作资料"}</p>
         </div>
         <div className="button-row">
-          <label className="import-button">
-            {busy ? "处理中…" : "上传知识资料"}
-            <input
-              aria-label="上传知识资料"
-              type="file"
-              accept=".txt,.md,.docx,.json"
-              disabled={busy}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                e.target.value = "";
-                if (!file) return;
-                run(async () => {
-                  const form = new FormData();
-                  form.append("file", file);
-                  const result = await api<{ warnings: string[] }>(
-                    `${prefix}/sources`,
-                    form,
-                  );
-                  await reload();
-                  await onChange();
-                  setHits(null);
-                  setMessage(
-                    result.warnings.join("；") || "上传完成，已建立片段索引。",
-                  );
-                });
-              }}
-            />
-          </label>
           <button
             className="text-button danger"
             disabled={busy}
@@ -322,16 +303,22 @@ function LibraryWorkspace({
         </div>
       </header>
       <div className="knowledge-stats">
-        <span>{files.length} 份资料</span>
-        <span>{files.reduce((n, f) => n + f.chunks, 0)} 个片段</span>
-        <span>TXT / Markdown / DOCX / 文渊 JSON · 单文件 ≤ 10MB</span>
+        <span>
+          <b>{files.length}</b> 份文档
+        </span>
+        <span>
+          <b>{files.filter((f) => f.chunks > 0).length}</b> 可检索
+        </span>
+        <span>
+          <b>{files.reduce((n, f) => n + f.chunks, 0)}</b> 个片段
+        </span>
       </div>
       {error && (
         <p className="error" role="alert">
           {error}
         </p>
       )}
-      {message && (
+      {message && !original && (
         <p className="notice" role="status">
           {message}
         </p>
@@ -347,20 +334,76 @@ function LibraryWorkspace({
             </button>
             <button
               aria-current={tab === "search" ? "page" : undefined}
+              aria-label="检索资料库"
               onClick={() => setTab("search")}
             >
-              检索资料库
+              检索测试
             </button>
           </nav>
           {tab === "files" ? (
             <>
-              <input
-                className="file-filter"
-                aria-label="筛选资料文件"
-                placeholder="按文件名筛选"
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-              />
+              <div className="knowledge-file-controls">
+                <div>
+                  <h2>全部文档</h2>
+                  <p>TXT / Markdown / DOCX / 文渊 JSON · 单文件 ≤ 10MB</p>
+                </div>{" "}
+                <label className="import-button primary">
+                  <UploadCloud size={15} /> {busy ? "处理中…" : "上传文档"}
+                  <input
+                    aria-label="上传知识资料"
+                    type="file"
+                    accept=".txt,.md,.docx,.json"
+                    disabled={busy}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      if (!file) return;
+                      run(async () => {
+                        const form = new FormData();
+                        form.append("file", file);
+                        const result = await api<{ warnings: string[] }>(
+                          `${prefix}/sources`,
+                          form,
+                        );
+                        await reload();
+                        await onChange();
+                        setHits(null);
+                        setMessage(
+                          result.warnings.join("；") ||
+                            "上传完成，已建立片段索引。",
+                        );
+                      });
+                    }}
+                  />
+                </label>
+              </div>
+              <div className="knowledge-file-filters">
+                <div className="status-filters">
+                  {[
+                    ["all", "全部"],
+                    ["ready", "可检索"],
+                    ["empty", "无文本"],
+                  ].map(([value, label]) => (
+                    <button
+                      key={value}
+                      aria-pressed={status === value}
+                      onClick={() => setStatus(value)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <label className="file-search">
+                  <Search size={14} />
+                  <input
+                    className="file-filter"
+                    aria-label="筛选资料文件"
+                    placeholder="按文件名筛选"
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                  />
+                </label>
+              </div>
               {loading ? (
                 <p role="status">正在读取资料…</p>
               ) : (
@@ -381,7 +424,7 @@ function LibraryWorkspace({
                             onClick={() => inspect(f.id)}
                             disabled={busy}
                           >
-                            {f.name}
+                            <FileText size={20} /> {f.name}
                           </button>
                           <small>
                             {(f.bytes / 1024).toFixed(1)} KB · v
@@ -490,99 +533,122 @@ function LibraryWorkspace({
             </>
           )}
         </section>
-        <aside className="knowledge-inspector" aria-label="资料原文">
-          {original ? (
-            <>
-              <header>
-                <div>
-                  <h2>{original.name}</h2>
-                  <small>
-                    v{original.version.slice(0, 12)} · {original.chunks.length}{" "}
-                    个片段
-                  </small>
-                </div>
-                <button
-                  aria-label="关闭资料原文"
-                  onClick={() => setOriginal(null)}
-                >
-                  ×
-                </button>
-              </header>
-              <div className="reference-actions">
-                <label>
-                  写作目标
-                  <select
-                    aria-label="资料添加目标文稿"
-                    value={current?.id || ""}
-                    onChange={(e) => onDocument(e.target.value)}
+        {original && (
+          <div
+            className="modal-overlay"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setOriginal(null);
+            }}
+          >
+            <section
+              className="knowledge-inspector"
+              role="dialog"
+              aria-modal="true"
+              aria-label="资料原文"
+            >
+              <>
+                <header>
+                  <div>
+                    <h2>{original.name}</h2>
+                    <small>
+                      v{original.version.slice(0, 12)} ·{" "}
+                      {original.chunks.length} 个片段
+                    </small>
+                  </div>
+                  <button
+                    aria-label="关闭资料原文"
+                    onClick={() => setOriginal(null)}
                   >
-                    <option value="" disabled>
-                      先选择一篇文稿
-                    </option>
-                    {documents.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.title}
-                      </option>
+                    <X size={18} />
+                  </button>
+                </header>
+                <div className="inspector-body">
+                  <div className="reference-actions">
+                    <h3>资料信息</h3>
+                    <p className="muted">
+                      抽取文本与分块，可下载原件核对格式。
+                    </p>
+                    <label>
+                      写作目标
+                      <select
+                        aria-label="资料添加目标文稿"
+                        value={current?.id || ""}
+                        onChange={(e) => onDocument(e.target.value)}
+                      >
+                        <option value="" disabled>
+                          先选择一篇文稿
+                        </option>
+                        {documents.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.title}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="button-row">
+                      <button
+                        className="primary"
+                        disabled={busy || !current}
+                        onClick={() =>
+                          run(async () => {
+                            await onAttach(library.id, original.id);
+                            setMessage(
+                              "已添加引用副本到文稿；重复点击不会重复添加。",
+                            );
+                          })
+                        }
+                      >
+                        添加到当前文稿
+                      </button>
+                      <button
+                        onClick={() => download(original.name, original.data)}
+                      >
+                        下载原件
+                      </button>
+                    </div>
+                    <button
+                      className="text-button"
+                      disabled={!current}
+                      onClick={onWrite}
+                    >
+                      前往写作工作台 →
+                    </button>
+                    <small>
+                      添加后作为独立引用副本保存，知识库删除或更新不会覆盖本次依据。
+                    </small>
+                  </div>
+                  <div className="original-chunks">
+                    {original.warnings.map((w) => (
+                      <p className="warning" key={w}>
+                        {w}
+                      </p>
                     ))}
-                  </select>
-                </label>
-                <div className="button-row">
-                  <button
-                    className="primary"
-                    disabled={busy || !current}
-                    onClick={() =>
-                      run(async () => {
-                        await onAttach(library.id, original.id);
-                        setMessage(
-                          "已添加引用副本到文稿；重复点击不会重复添加。",
-                        );
-                      })
-                    }
-                  >
-                    添加到当前文稿
-                  </button>
-                  <button
-                    onClick={() => download(original.name, original.data)}
-                  >
-                    下载原件
-                  </button>
+                    {original.chunks.map((c) => (
+                      <section
+                        id={`knowledge-chunk-${c.id}`}
+                        className={`chunk ${focused === c.id ? "focused" : ""}`}
+                        key={c.id}
+                      >
+                        <small>片段 #{c.ordinal}</small>
+                        {c.text}
+                      </section>
+                    ))}
+                  </div>
                 </div>
-                <button
-                  className="text-button"
-                  disabled={!current}
-                  onClick={onWrite}
-                >
-                  前往写作工作台 →
-                </button>
-                <small>
-                  添加后作为独立引用副本保存，知识库删除或更新不会覆盖本次依据。
-                </small>
-              </div>
-              <div className="original-chunks">
-                {original.warnings.map((w) => (
-                  <p className="warning" key={w}>
-                    {w}
+                {message && (
+                  <p className="notice" role="status">
+                    {message}
                   </p>
-                ))}
-                {original.chunks.map((c) => (
-                  <section
-                    id={`knowledge-chunk-${c.id}`}
-                    className={`chunk ${focused === c.id ? "focused" : ""}`}
-                    key={c.id}
-                  >
-                    <small>片段 #{c.ordinal}</small>
-                    {c.text}
-                  </section>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="inspector-empty">
-              <h2>资料原文</h2>
-              <p>选择文档或检索命中，可核对片段、资料版本与原始文件。</p>
-            </div>
-          )}
-        </aside>
+                )}
+                {error && (
+                  <p className="error" role="alert">
+                    {error}
+                  </p>
+                )}
+              </>
+            </section>
+          </div>
+        )}
       </div>
     </>
   );

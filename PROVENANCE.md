@@ -26,10 +26,16 @@ FFmpeg、LibreOffice、Xvfb，不打包这些工具或字体进入源码/发行�
 模型做合成验收，该授权不视为模型权重再分发许可，仓库不含权重或旧模型密钥。
 
 界面调整参考旧项目 `frontend/components/writer/OfficeWriterWorkspace.tsx` 的三栏布局、
-侧栏收起交互，以及 `frontend/app/(main)/layout.tsx` 的导航层级。文渊的 JSX、CSS 与
-侧栏按钮图形在本仓库独立编写；未复制旧组件、图标库、样式文件或素材，未增加依赖。
+侧栏收起交互，以及 `frontend/app/(main)/layout.tsx` 的导航层级。该轮文渊的 JSX、CSS 与侧栏按钮图形在本仓库独立编写，未复制旧组件、样式文件或素材。
 
 后续四界面扩展还参考旧项目知识库、模板目录、知识问答与 AgentSidebar 的信息布局。
 本次新增 AppNavigation、KnowledgePage、TemplateLibrary、Knowledge 存储模块及测试均在
 文渊独立实现，未复制旧模板内容、对话或知识库数据。详细路径和范围见
 [四界面对照](docs/PRODUCT_SURFACES.md)。新增 SQLite 表与索引复用不引入额外依赖。
+
+2026-10-31 按维护者要求进一步对齐公文智写界面：参考旧项目提交 `4731fb8` 的
+布局、颜色、尺寸与信息层级，独立改写文渊界面，不迁移旧业务组件或 Office 引擎。
+对照时使用隔离的旧前端及合成 API 响应，未读取旧客户知识库或会话。
+新增公开依赖 `lucide-react@0.562.0`，用于与参考界面一致的通用线条图标；
+其 ISC 及随包 Feather MIT 文字已保留在第三方清单与 notices，不计作自研图形。
+模板内容仍为文渊的四种原创预设，未复制旧模板、字体或图片。

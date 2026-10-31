@@ -101,6 +101,16 @@
   },
   {
     "ecosystem": "npm",
+    "name": "lucide-react",
+    "versions": [
+      "0.562.0"
+    ],
+    "license": "ISC",
+    "source": "https://lucide.dev",
+    "author": "Eric Fennis"
+  },
+  {
+    "ecosystem": "npm",
     "name": "picocolors",
     "versions": [
       "1.1.1"

@@ -56,6 +56,7 @@ MPL-2.0 的 certifi、CC-BY-4.0 的 caniuse-lite 等保持各自许可和归属�
 | npm | diff | 8.0.3 | BSD-3-Clause | [upstream](https://github.com/kpdecker/jsdiff#readme) |
 | npm | esbuild | 0.27.7 | MIT | [upstream](https://github.com/evanw/esbuild#readme) |
 | npm | get-tsconfig | 4.14.3 | MIT | [upstream](https://github.com/privatenumber/get-tsconfig#readme) |
+| npm | lucide-react | 0.562.0 | ISC | [upstream](https://lucide.dev) |
 | npm | nanoid | 3.3.20 | MIT | [upstream](https://github.com/ai/nanoid#readme) |
 | npm | next | 16.4.1 | MIT | [upstream](https://nextjs.org) |
 | npm | orderedmap | 2.1.1 | MIT | [upstream](https://github.com/marijnh/orderedmap#readme) |
