@@ -17,6 +17,38 @@ async function saved(page: Page) {
   });
 }
 
+test("collapsible panes preserve the writing request, editor content and undo history", async ({
+  page,
+}) => {
+  await login(page);
+  await create(page);
+  await page.getByLabel("写作要求").fill("合成要求：请保持简洁");
+  const editor = page.getByRole("textbox", { name: "文章正文" });
+  await editor.click();
+  await page.keyboard.insertText("收起面板后仍可编辑");
+  await saved(page);
+  const originalWidth = (await page.locator(".editor-scroll").boundingBox())!
+    .width;
+  await page.getByRole("button", { name: "收起文稿栏" }).click();
+  await page.getByRole("button", { name: "收起辅助面板" }).click();
+  await expect(page.getByRole("navigation", { name: "我的文稿" })).toBeHidden();
+  await expect(page.getByLabel("写作要求")).toBeHidden();
+  expect(
+    (await page.locator(".editor-scroll").boundingBox())!.width,
+  ).toBeGreaterThan(originalWidth + 400);
+  await page.getByRole("button", { name: "撤销", exact: true }).click();
+  await expect(editor).not.toContainText("收起面板后仍可编辑");
+  await page.getByRole("button", { name: "重做", exact: true }).click();
+  await expect(editor).toContainText("收起面板后仍可编辑");
+  await page.getByRole("button", { name: "展开文稿栏" }).click();
+  await page.getByRole("button", { name: "展开辅助面板" }).click();
+  await expect(page.getByLabel("写作要求")).toHaveValue("合成要求：请保持简洁");
+  await expect(
+    page.getByRole("navigation", { name: "我的文稿" }),
+  ).toBeVisible();
+  await saved(page);
+});
+
 test("create, edit Chinese/emoji, heading outline, save, refresh, rename and export", async ({
   page,
 }) => {

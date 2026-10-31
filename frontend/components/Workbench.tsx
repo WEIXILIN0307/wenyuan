@@ -18,6 +18,7 @@ import { recoveryKey, otherDrafts } from "../lib/recovery";
 import TemplatePicker, { type Template } from "./TemplatePicker";
 import ChecksPanel from "./ChecksPanel";
 import WritingContext, { type InputContext } from "./WritingContext";
+import PaneToggle from "./PaneToggle";
 
 type DocSummary = {
   id: string;
@@ -52,6 +53,8 @@ const actions = [
 ];
 
 export default function Workbench() {
+  const [manuscriptsOpen, setManuscriptsOpen] = useState(true),
+    [assistantOpen, setAssistantOpen] = useState(true);
   const [user, setUser] = useState<string | null>(null),
     [ready, setReady] = useState(false),
     [token, setToken] = useState("");
@@ -505,9 +508,17 @@ export default function Workbench() {
     );
   return (
     <main className="workbench">
-      <aside className="sidebar">
+      <aside
+        className="sidebar"
+        id="manuscript-pane"
+        hidden={!manuscriptsOpen}
+        aria-label="文稿管理"
+      >
         <div className="brand">
-          <b>文渊</b>
+          <div>
+            <b>文渊</b>
+            <small>写作工作台</small>
+          </div>
           <span className="version">v0.1</span>
         </div>
         <button className="primary new-doc" onClick={create}>
@@ -534,11 +545,12 @@ export default function Workbench() {
         <div className="section-label">
           文稿 <span>{docs.length}</span>
         </div>
-        <nav className="doc-list">
+        <nav className="doc-list" aria-label="我的文稿">
           {docs.map((d) => (
             <button
               key={d.id}
               className={current?.id === d.id ? "doc-item active" : "doc-item"}
+              aria-current={current?.id === d.id ? "page" : undefined}
               onClick={() => openDoc(d.id)}
             >
               <div>
@@ -596,8 +608,15 @@ export default function Workbench() {
           </div>
         )}
         <header className="workspace-header">
-          <div className="breadcrumb">
-            文稿 <span>/</span> {current?.title || "未选择文稿"}
+          <div className="workspace-location">
+            <PaneToggle
+              side="left"
+              expanded={manuscriptsOpen}
+              onClick={() => setManuscriptsOpen(!manuscriptsOpen)}
+            />
+            <div className="breadcrumb">
+              工作台 <span>/</span> {current ? "正文编辑" : "文稿"}
+            </div>
           </div>
           <div className="header-actions">
             {current && (
@@ -619,6 +638,13 @@ export default function Workbench() {
                   设置
                 </button>
               </>
+            )}
+            {current && (
+              <PaneToggle
+                side="right"
+                expanded={assistantOpen}
+                onClick={() => setAssistantOpen(!assistantOpen)}
+              />
             )}
           </div>
         </header>
@@ -695,38 +721,63 @@ export default function Workbench() {
         )}
       </section>
       {current && (
-        <aside className="right-panel">
-          <div className="panel-tabs">
+        <aside
+          className="right-panel"
+          id="assistant-pane"
+          hidden={!assistantOpen}
+          aria-label="写作与资料"
+        >
+          <nav className="panel-tabs" aria-label="文稿辅助工具">
             <button
               className={tab === "ai" ? "active" : ""}
+              aria-current={tab === "ai" ? "page" : undefined}
               onClick={() => setTab("ai")}
             >
               写作助手
             </button>
             <button
               className={tab === "sources" ? "active" : ""}
+              aria-current={tab === "sources" ? "page" : undefined}
               onClick={() => setTab("sources")}
             >
               资料
             </button>
             <button
               className={tab === "history" ? "active" : ""}
+              aria-current={tab === "history" ? "page" : undefined}
               onClick={showHistory}
             >
               历史
             </button>
             <button
               className={tab === "checks" ? "active" : ""}
+              aria-current={tab === "checks" ? "page" : undefined}
               onClick={() => setTab("checks")}
             >
               检查
             </button>
-          </div>
+          </nav>
           {tab === "ai" && (
             <div className="panel-body">
               <div className="assistant-intro">
-                <h2>写作助手</h2>
-                <p>选择任务并填写要求，结果先供你审阅。</p>
+                <div className="assistant-heading">
+                  <h2>写作要求</h2>
+                  <button
+                    className="text-button"
+                    onClick={async () => {
+                      try {
+                        const result = await api("/provider");
+                        if (result) setProvider(result);
+                        setSettings(true);
+                      } catch (e) {
+                        fail(e);
+                      }
+                    }}
+                  >
+                    模型设置
+                  </button>
+                </div>
+                <p>结果先预览，确认后写入正文。</p>
               </div>
               <label>
                 写作任务
@@ -742,8 +793,9 @@ export default function Workbench() {
                 </select>
               </label>
               <label>
-                写作要求
+                <span>具体要求</span>
                 <textarea
+                  aria-label="写作要求"
                   placeholder="说明要写什么、参考哪些资料，或如何修改选中文字。"
                   value={instruction}
                   onChange={(e) => setInstruction(e.target.value)}
@@ -757,7 +809,11 @@ export default function Workbench() {
                   <p>{selection.text}</p>
                 </div>
               )}
-              <button onClick={inspectInput} disabled={!instruction.trim()}>
+              <button
+                className="inspect-input"
+                onClick={inspectInput}
+                disabled={!instruction.trim()}
+              >
                 查看发送内容
               </button>
               {inputContext && (
@@ -775,20 +831,6 @@ export default function Workbench() {
               <p className="disclosure">
                 文稿和检索资料将发送至配置的模型服务。建议需确认后写入。
               </p>
-              <button
-                className="text-button"
-                onClick={async () => {
-                  try {
-                    const result = await api("/provider");
-                    if (result) setProvider(result);
-                    setSettings(true);
-                  } catch (e) {
-                    fail(e);
-                  }
-                }}
-              >
-                模型设置
-              </button>
               {proposal && (
                 <article className="proposal">
                   <div className="proposal-title">

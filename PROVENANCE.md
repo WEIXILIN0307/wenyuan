@@ -24,3 +24,7 @@
 本轮未新增运行/开发依赖；本地填表使用环境已有 python-docx（MIT），录像/检查使用系统
 FFmpeg、LibreOffice、Xvfb，不打包这些工具或字体进入源码/发行物。维护者授权消费旧部署
 模型做合成验收，该授权不视为模型权重再分发许可，仓库不含权重或旧模型密钥。
+
+界面调整参考旧项目 `frontend/components/writer/OfficeWriterWorkspace.tsx` 的三栏布局、
+侧栏收起交互，以及 `frontend/app/(main)/layout.tsx` 的导航层级。文渊的 JSX、CSS 与
+侧栏按钮图形在本仓库独立编写；未复制旧组件、图标库、样式文件或素材，未增加依赖。
