@@ -124,3 +124,4 @@ pnpm build
 项目目前由 1 人维护，无已核实外部用户与商业收入，不以合成案例代替实际用户。
 
 四界面的参考范围、增量存储和能力边界见 [实现对照](docs/PRODUCT_SURFACES.md)。
+本轮测试、真实模型与演示结果见 [四界面验证](docs/PRODUCT_SURFACES_VALIDATION.md)。
