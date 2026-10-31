@@ -28,3 +28,8 @@ FFmpeg、LibreOffice、Xvfb，不打包这些工具或字体进入源码/发行�
 界面调整参考旧项目 `frontend/components/writer/OfficeWriterWorkspace.tsx` 的三栏布局、
 侧栏收起交互，以及 `frontend/app/(main)/layout.tsx` 的导航层级。文渊的 JSX、CSS 与
 侧栏按钮图形在本仓库独立编写；未复制旧组件、图标库、样式文件或素材，未增加依赖。
+
+后续四界面扩展还参考旧项目知识库、模板目录、知识问答与 AgentSidebar 的信息布局。
+本次新增 AppNavigation、KnowledgePage、TemplateLibrary、Knowledge 存储模块及测试均在
+文渊独立实现，未复制旧模板内容、对话或知识库数据。详细路径和范围见
+[四界面对照](docs/PRODUCT_SURFACES.md)。新增 SQLite 表与索引复用不引入额外依赖。

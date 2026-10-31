@@ -74,6 +74,17 @@ class Store:
               CREATE TABLE IF NOT EXISTS imports (
                 document_id TEXT PRIMARY KEY REFERENCES documents(id) ON DELETE CASCADE,
                 name TEXT NOT NULL, original BLOB NOT NULL, warnings TEXT NOT NULL);
+              CREATE TABLE IF NOT EXISTS libraries (
+                id TEXT PRIMARY KEY, owner TEXT NOT NULL REFERENCES users(id),
+                name TEXT NOT NULL, description TEXT NOT NULL, created TEXT NOT NULL);
+              CREATE TABLE IF NOT EXISTS library_sources (
+                source_id TEXT PRIMARY KEY REFERENCES sources(id) ON DELETE CASCADE,
+                library_id TEXT NOT NULL REFERENCES libraries(id) ON DELETE CASCADE, created TEXT NOT NULL);
+              CREATE TABLE IF NOT EXISTS source_origins (
+                source_id TEXT PRIMARY KEY REFERENCES sources(id) ON DELETE CASCADE,
+                document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+                library_source_id TEXT NOT NULL, library_name TEXT NOT NULL,
+                UNIQUE(document_id,library_source_id));
             """)
         os.chmod(self.path, 0o600)
 

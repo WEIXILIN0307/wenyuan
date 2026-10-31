@@ -17,9 +17,10 @@ from starlette.concurrency import run_in_threadpool
 from .ai import Generate, Provider, generate, prepare, build_context, validate_provider_url
 from .writing import template, check_document
 from .presets import PRESETS
-from .search import retrieve, split_source
-from .core import Conflict, Transaction, canonical, digest, plain, uid
+from .search import retrieve, write_source
+from .core import Conflict, Transaction, canonical, plain
 from .store import Store
+from .knowledge import Knowledge
 
 
 def convert(request):
@@ -50,8 +51,20 @@ class Login(BaseModel):
     token: str = Field(min_length=20, max_length=200)
 
 
+class CreateLibrary(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    name: str = Field(min_length=1, max_length=100)
+    description: str = Field(default="", max_length=1000)
+
+
+class AttachSource(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    document_id: str = Field(min_length=1, max_length=64)
+
+
 def create_app(directory: Path | None = None):
     store = Store(directory or Path(os.environ.get("WENYUAN_DATA", ".data")))
+    knowledge = Knowledge(store)
     jobs: dict[str, asyncio.Task] = {}
     parse_slots = asyncio.Semaphore(2)
 
@@ -168,6 +181,51 @@ def create_app(directory: Path | None = None):
     def documents(user=Depends(owner)):
         return store.list(user)
 
+    @app.get("/libraries")
+    def libraries(user=Depends(owner)):
+        return knowledge.list(user)
+
+    @app.post("/libraries", status_code=201)
+    def create_library(body: CreateLibrary, user=Depends(owner)):
+        return knowledge.create(user, body.name, body.description)
+
+    @app.delete("/libraries/{library_id}")
+    def delete_library(library_id: str, user=Depends(owner)):
+        knowledge.delete(user, library_id)
+        return {"deleted": True}
+
+    @app.get("/libraries/{library_id}/sources")
+    def library_sources(library_id: str, user=Depends(owner)):
+        return knowledge.files(user, library_id)
+
+    @app.post("/libraries/{library_id}/sources", status_code=201)
+    async def upload_library_source(library_id: str, file: UploadFile = File(), user=Depends(owner)):
+        knowledge.get(user, library_id)
+        name, data = await uploaded(file)
+        result = await bounded_convert(
+            {"action": "import", "name": name, "data": base64.b64encode(data).decode()}
+        )
+        return knowledge.upload(user, library_id, name, data, plain(result["content"]), result["warnings"])
+
+    @app.get("/libraries/{library_id}/sources/{source_id}")
+    def read_library_source(library_id: str, source_id: str, user=Depends(owner)):
+        return knowledge.read(user, library_id, source_id)
+
+    @app.delete("/libraries/{library_id}/sources/{source_id}")
+    def delete_library_source(library_id: str, source_id: str, user=Depends(owner)):
+        knowledge.delete(user, library_id, source_id)
+        return {"deleted": True}
+
+    @app.get("/libraries/{library_id}/search")
+    def search_library(library_id: str, q: str = "", user=Depends(owner)):
+        if len(q) > 12000:
+            raise ValueError("查询过长")
+        return knowledge.search(user, library_id, q)
+
+    @app.post("/libraries/{library_id}/sources/{source_id}/attach")
+    def attach_source(library_id: str, source_id: str, body: AttachSource, user=Depends(owner)):
+        return knowledge.attach(user, library_id, source_id, body.document_id)
+
     @app.get("/templates")
     def templates(user=Depends(owner)):
         return [template(identifier) for identifier in PRESETS]
@@ -282,7 +340,9 @@ def create_app(directory: Path | None = None):
             return [
                 {**dict(r), "warnings": json.loads(r["warnings"])}
                 for r in db.execute(
-                    "SELECT id,name,version,warnings FROM sources WHERE document_id=?", (doc_id,)
+                    "SELECT s.id,s.name,s.version,s.warnings,o.library_name AS origin_library "
+                    "FROM sources s LEFT JOIN source_origins o ON o.source_id=s.id WHERE s.document_id=?",
+                    (doc_id,),
                 )
             ]
 
@@ -293,21 +353,9 @@ def create_app(directory: Path | None = None):
         result = await bounded_convert(
             {"action": "import", "name": name, "data": base64.b64encode(data).decode()}
         )
-        chunks = split_source(plain(result["content"]))
-        if len(chunks) > 1000:
-            raise ValueError("资料超过 1000 片段限制")
-        identifier, version = uid(), digest(data.hex())
         with store.connect(True) as db:
             store._get(db, user, doc_id)
-            db.execute(
-                "INSERT INTO sources VALUES (?,?,?,?,?,?)",
-                (identifier, doc_id, name, version, data, canonical(result["warnings"])),
-            )
-            db.executemany(
-                "INSERT INTO chunks VALUES (?,?,?,?)",
-                [(uid(), identifier, i, chunk) for i, chunk in enumerate(chunks)],
-            )
-        return {"id": identifier, "version": version, "chunks": len(chunks), "warnings": result["warnings"]}
+            return write_source(db, doc_id, name, data, plain(result["content"]), result["warnings"])
 
     @app.get("/documents/{doc_id}/search")
     def search(doc_id: str, q: str = "", user=Depends(owner)):

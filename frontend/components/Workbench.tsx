@@ -19,6 +19,9 @@ import TemplatePicker, { type Template } from "./TemplatePicker";
 import ChecksPanel from "./ChecksPanel";
 import WritingContext, { type InputContext } from "./WritingContext";
 import PaneToggle from "./PaneToggle";
+import AppNavigation, { surfaces, type Surface } from "./AppNavigation";
+import TemplateLibrary from "./TemplateLibrary";
+import KnowledgePage from "./KnowledgePage";
 
 type DocSummary = {
   id: string;
@@ -26,7 +29,13 @@ type DocSummary = {
   revision: number;
   updated: string;
 };
-type Source = { id: string; name: string; version: string; warnings: string[] };
+type Source = {
+  id: string;
+  name: string;
+  version: string;
+  warnings: string[];
+  origin_library?: string | null;
+};
 type Proposal = {
   document_context?: string;
   sources?: InputContext["sources"];
@@ -51,8 +60,17 @@ const actions = [
   ["compress", "压缩"],
   ["correct", "纠错"],
 ];
+const defaultProvider = {
+  base_url: "https://api.openai.com/v1",
+  model: "",
+  key_configured: false,
+  timeout: 60,
+  thinking: null as boolean | null,
+};
 
 export default function Workbench() {
+  const [view, setView] = useState<Surface>("writer"),
+    [navExpanded, setNavExpanded] = useState<boolean | null>(null);
   const [manuscriptsOpen, setManuscriptsOpen] = useState(true),
     [assistantOpen, setAssistantOpen] = useState(true);
   const [user, setUser] = useState<string | null>(null),
@@ -78,13 +96,7 @@ export default function Workbench() {
     [searchResults, setSearchResults] = useState<any[]>([]);
   const [preview, setPreview] = useState(false),
     [settings, setSettings] = useState(false),
-    [provider, setProvider] = useState({
-      base_url: "https://api.openai.com/v1",
-      model: "",
-      key_configured: false,
-      timeout: 60,
-      thinking: null as boolean | null,
-    });
+    [provider, setProvider] = useState(defaultProvider);
   const [history, setHistory] = useState<any[]>([]),
     [records, setRecords] = useState<any[]>([]),
     [busy, setBusy] = useState(false);
@@ -94,12 +106,72 @@ export default function Workbench() {
   const currentRef = useRef(current);
   currentRef.current = current;
   const fail = (e: unknown) => setError((e as Error).message || String(e));
+  const navigate = (surface: Surface) => {
+    setView(surface);
+    window.location.hash = surface;
+    if (surface === "good-ai") {
+      setAssistantOpen(true);
+      setManuscriptsOpen(true);
+      setTab("ai");
+    }
+  };
+  useEffect(() => {
+    const read = () => {
+      const surface =
+        surfaces.find((s) => `#${s.id}` === window.location.hash)?.id ||
+        "writer";
+      setView(surface);
+      if (surface === "good-ai") {
+        setAssistantOpen(true);
+        setManuscriptsOpen(true);
+      }
+    };
+    read();
+    window.addEventListener("hashchange", read);
+    return () => window.removeEventListener("hashchange", read);
+  }, []);
+  const openSettings = async () => {
+    try {
+      const config = await api("/provider");
+      setProvider(config || defaultProvider);
+      setSettings(true);
+    } catch (e) {
+      fail(e);
+    }
+  };
+  const logout = async () => {
+    try {
+      if (queue.current?.dirty) await save();
+      await api("/session", undefined, "DELETE");
+      queue.current = null;
+      setCurrent(null);
+      setContent(null);
+      setProposal(null);
+      setInputContext(null);
+      setSettings(false);
+      setPicking(false);
+      setPreview(false);
+      setSelection(null);
+      setDocs([]);
+      setSources([]);
+      setSourceText(null);
+      setInstruction("");
+      setHistory([]);
+      setRecords([]);
+      setProvider(defaultProvider);
+      setWarnings([]);
+      setError("");
+      setUser(null);
+    } catch (e) {
+      fail(e);
+    }
+  };
   const loadDocs = async () => setDocs(await api("/documents"));
   const openSource = async (sourceId: string, chunkId?: string) => {
+    const targetId = currentRef.current!.id;
     try {
-      const s = await api(
-        `/documents/${currentRef.current!.id}/sources/${sourceId}`,
-      );
+      const s = await api(`/documents/${targetId}/sources/${sourceId}`);
+      if (currentRef.current?.id !== targetId) return;
       setSourceText({ ...s, focused_chunk_id: chunkId });
       setTab("sources");
     } catch (e) {
@@ -315,9 +387,12 @@ export default function Workbench() {
   };
   const generate = async () => {
     setError("");
+    const target = queue.current;
+    if (!target) return;
     try {
       await save();
-      const doc = queue.current!.base;
+      if (queue.current !== target) return;
+      const doc = target.base;
       if (!["outline", "draft"].includes(action) && !selection)
         throw new Error("请在同一纯文本段落中选择需要修改的文字");
       const request = {
@@ -332,35 +407,40 @@ export default function Workbench() {
             }
           : undefined),
       };
-      setInputContext(
-        await api(`/documents/${doc.id}/writing-context`, request),
+      const context = await api(
+        `/documents/${doc.id}/writing-context`,
+        request,
       );
+      if (queue.current !== target) return;
+      setInputContext(context);
       const p = await api(`/documents/${doc.id}/proposals`, request);
-      setProposal(p);
+      if (queue.current === target) setProposal(p);
     } catch (e) {
-      fail(e);
+      if (queue.current === target) fail(e);
     }
   };
   const inspectInput = async () => {
+    const target = queue.current;
+    if (!target) return;
     try {
       await save();
-      const doc = queue.current!.base;
-      setInputContext(
-        await api(`/documents/${doc.id}/writing-context`, {
-          action,
-          instruction,
-          base_revision: doc.revision,
-          ...(!["draft", "outline"].includes(action) && selection
-            ? {
-                node_id: selection.node_id,
-                start: selection.start,
-                end: selection.end,
-              }
-            : {}),
-        }),
-      );
+      if (queue.current !== target) return;
+      const doc = target.base;
+      const context = await api(`/documents/${doc.id}/writing-context`, {
+        action,
+        instruction,
+        base_revision: doc.revision,
+        ...(!["draft", "outline"].includes(action) && selection
+          ? {
+              node_id: selection.node_id,
+              start: selection.start,
+              end: selection.end,
+            }
+          : {}),
+      });
+      if (queue.current === target) setInputContext(context);
     } catch (e) {
-      fail(e);
+      if (queue.current === target) fail(e);
     }
   };
   const useTemplate = async (t: Template) => {
@@ -375,6 +455,7 @@ export default function Workbench() {
     ]);
     setEpoch((x) => x + 1);
     setTab("ai");
+    navigate("writer");
   };
   const accept = async () => {
     try {
@@ -507,633 +588,728 @@ export default function Workbench() {
       </main>
     );
   return (
-    <main className="workbench">
-      <aside
-        className="sidebar"
-        id="manuscript-pane"
-        hidden={!manuscriptsOpen}
-        aria-label="文稿管理"
-      >
-        <div className="brand">
+    <main className="app-shell">
+      <AppNavigation
+        view={view}
+        expanded={navExpanded ?? !["writer", "good-ai"].includes(view)}
+        onToggle={() =>
+          setNavExpanded(
+            !(navExpanded ?? !["writer", "good-ai"].includes(view)),
+          )
+        }
+        onNavigate={navigate}
+        onStart={async () => {
+          navigate("writer");
+          if (!current) await create();
+        }}
+        user={user}
+        onLogout={logout}
+      />
+      <section className="app-main">
+        <header className="product-header">
           <div>
-            <b>文渊</b>
-            <small>写作工作台</small>
+            <h1>{surfaces.find((s) => s.id === view)!.name}</h1>
+            <p>{surfaces.find((s) => s.id === view)!.detail}</p>
           </div>
-          <span className="version">v0.1</span>
-        </div>
-        <button className="primary new-doc" onClick={create}>
-          新建文稿
-        </button>
-        <div className="sidebar-actions">
-          <button className="template-entry" onClick={() => setPicking(true)}>
-            从模板创建
-          </button>
-          <label className="import-button">
-            导入文档
-            <input
-              aria-label="导入文档"
-              type="file"
-              accept=".md,.txt,.json,.docx"
-              disabled={busy}
-              onChange={(e) => {
-                upload(e.target.files?.[0]);
-                e.target.value = "";
-              }}
-            />
-          </label>
-        </div>
-        <div className="section-label">
-          文稿 <span>{docs.length}</span>
-        </div>
-        <nav className="doc-list" aria-label="我的文稿">
-          {docs.map((d) => (
-            <button
-              key={d.id}
-              className={current?.id === d.id ? "doc-item active" : "doc-item"}
-              aria-current={current?.id === d.id ? "page" : undefined}
-              onClick={() => openDoc(d.id)}
-            >
-              <div>
-                <b>{d.title}</b>
-                <small>
-                  r{d.revision} ·{" "}
-                  {new Date(d.updated).toLocaleDateString("zh-CN")}
-                </small>
-              </div>
-            </button>
-          ))}
-        </nav>
-        {content && (
-          <div className="outline">
-            <div className="section-label">文章大纲</div>
-            {outline(content).length ? (
-              outline(content).map((h) => (
-                <button
-                  key={h.id}
-                  style={{ paddingLeft: 12 + (h.level - 1) * 10 }}
-                  onClick={() => editor.current?.focusNode(h.id)}
-                >
-                  {h.title || "未命名标题"}
-                </button>
-              ))
-            ) : (
-              <p>应用标题样式后自动生成</p>
-            )}
-          </div>
-        )}
-        <footer>
-          <span title={user}>本地工作区 · {user}</span>
-          <button
-            onClick={async () => {
-              try {
-                if (queue.current?.dirty) await save();
-                await api("/session", undefined, "DELETE");
-                queue.current = null;
-                setCurrent(null);
-                setContent(null);
-                setUser(null);
-              } catch (e) {
-                fail(e);
-              }
-            }}
-          >
-            退出
-          </button>
-        </footer>
-      </aside>
-      <section className="workspace">
-        {process.env.NEXT_PUBLIC_WENYUAN_DEMO_MODEL === "simulated" && (
-          <div className="demo-disclosure">
-            合成资料演示 · 模拟模型（不作为真实模型验收）
-          </div>
-        )}
-        <header className="workspace-header">
-          <div className="workspace-location">
-            <PaneToggle
-              side="left"
-              expanded={manuscriptsOpen}
-              onClick={() => setManuscriptsOpen(!manuscriptsOpen)}
-            />
-            <div className="breadcrumb">
-              工作台 <span>/</span> {current ? "正文编辑" : "文稿"}
-            </div>
-          </div>
-          <div className="header-actions">
+          <div className="product-header-actions">
             {current && (
-              <>
-                <span
-                  className={
-                    queue.current?.error ? "save-state failed" : "save-state"
-                  }
-                  aria-live="polite"
-                >
-                  {status}
-                </span>
-                <button onClick={() => save().catch(() => {})}>保存</button>
-                <button onClick={() => setPreview(true)}>分页预览</button>
-                <button onClick={() => exportFile("docx")} className="primary">
-                  导出 DOCX
-                </button>
-                <button aria-label="文档设置" onClick={() => setSettings(true)}>
-                  设置
-                </button>
-              </>
+              <span className="context-document" title={current.title}>
+                当前文稿 · {current.title}
+              </span>
             )}
-            {current && (
-              <PaneToggle
-                side="right"
-                expanded={assistantOpen}
-                onClick={() => setAssistantOpen(!assistantOpen)}
-              />
-            )}
+            <button onClick={openSettings}>模型设置</button>
           </div>
         </header>
-        {error && (
-          <div role="alert" className="error banner">
-            <span>{error}</span>
-            {queue.current?.blocked && (
-              <button onClick={forkRecovery}>另存本地恢复稿</button>
-            )}
+        {error && view !== "writer" && (
+          <div role="alert" className="error global-error">
+            {error}
             <button onClick={() => setError("")}>关闭提示</button>
           </div>
         )}
-        {warnings.length > 0 && (
-          <div className="warning banner">
-            <div>
-              {warnings.map((w, i) => (
-                <p key={i}>{w}</p>
-              ))}
-            </div>
-            <button onClick={() => setWarnings([])}>收起</button>
-          </div>
-        )}
-        {current && content ? (
-          <>
-            <div className="document-heading">
-              <input
-                aria-label="文章标题"
-                key={`${current.id}:${current.title}`}
-                defaultValue={current.title}
-                onBlur={(e) => {
-                  if (e.target.value !== queue.current!.base.title)
-                    transact([
-                      { type: "metadata", title: e.target.value },
-                    ]).catch(fail);
-                }}
-              />
-              <div>
-                <span>第 {current.revision} 版</span>
-                <span>{textOf(content).length.toLocaleString()} 字符</span>
-              </div>
-            </div>
-            <div className="editor-scroll">
-              <Editor
-                key={`${current.id}:${epoch}`}
-                ref={editor}
-                content={content}
-                layout={current.layout}
-                onChange={change}
-                onSelection={setSelection}
-                onError={setError}
-              />
-            </div>
-            <footer className="editor-footer">
-              <span>修改自动保存 · Ctrl/⌘ Z 撤销</span>
-              <span>{sources.length} 份参考资料</span>
-            </footer>
-          </>
-        ) : (
-          <div className="empty">
-            <h1>{docs.length ? "未打开文稿" : "开始写作"}</h1>
-            <p>
-              {docs.length
-                ? "从左侧打开一篇文稿，或创建新文稿。"
-                : "创建空白文稿，也可以从模板开始。"}
-            </p>
-            <div className="empty-actions">
-              <button className="primary" onClick={create}>
-                创建空白文稿
-              </button>
-              <button onClick={() => setPicking(true)}>使用模板</button>
-            </div>
-            <small>可导入 DOCX、Markdown、TXT 或文渊 JSON 文件。</small>
-          </div>
-        )}
-      </section>
-      {current && (
-        <aside
-          className="right-panel"
-          id="assistant-pane"
-          hidden={!assistantOpen}
-          aria-label="写作与资料"
+        <div
+          className={`workbench ${view === "good-ai" ? "good-ai-mode" : ""}`}
+          hidden={!["writer", "good-ai"].includes(view)}
         >
-          <nav className="panel-tabs" aria-label="文稿辅助工具">
-            <button
-              className={tab === "ai" ? "active" : ""}
-              aria-current={tab === "ai" ? "page" : undefined}
-              onClick={() => setTab("ai")}
-            >
-              写作助手
-            </button>
-            <button
-              className={tab === "sources" ? "active" : ""}
-              aria-current={tab === "sources" ? "page" : undefined}
-              onClick={() => setTab("sources")}
-            >
-              资料
-            </button>
-            <button
-              className={tab === "history" ? "active" : ""}
-              aria-current={tab === "history" ? "page" : undefined}
-              onClick={showHistory}
-            >
-              历史
-            </button>
-            <button
-              className={tab === "checks" ? "active" : ""}
-              aria-current={tab === "checks" ? "page" : undefined}
-              onClick={() => setTab("checks")}
-            >
-              检查
-            </button>
-          </nav>
-          {tab === "ai" && (
-            <div className="panel-body">
-              <div className="assistant-intro">
-                <div className="assistant-heading">
-                  <h2>写作要求</h2>
-                  <button
-                    className="text-button"
-                    onClick={async () => {
-                      try {
-                        const result = await api("/provider");
-                        if (result) setProvider(result);
-                        setSettings(true);
-                      } catch (e) {
-                        fail(e);
-                      }
-                    }}
-                  >
-                    模型设置
-                  </button>
-                </div>
-                <p>结果先预览，确认后写入正文。</p>
-              </div>
-              <label>
-                写作任务
-                <select
-                  value={action}
-                  onChange={(e) => setAction(e.target.value)}
-                >
-                  {actions.map(([v, t]) => (
-                    <option key={v} value={v}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>具体要求</span>
-                <textarea
-                  aria-label="写作要求"
-                  placeholder="说明要写什么、参考哪些资料，或如何修改选中文字。"
-                  value={instruction}
-                  onChange={(e) => setInstruction(e.target.value)}
-                />
-              </label>
-              {selection && (
-                <div className="selection-card">
-                  <small>
-                    锁定选区 · {Array.from(selection.text).length} 字符
-                  </small>
-                  <p>{selection.text}</p>
-                </div>
-              )}
-              <button
-                className="inspect-input"
-                onClick={inspectInput}
-                disabled={!instruction.trim()}
-              >
-                查看发送内容
-              </button>
-              {inputContext && (
-                <WritingContext context={inputContext} onSource={openSource} />
-              )}
-              <button
-                className="primary"
-                disabled={
-                  !instruction.trim() || proposal?.state === "generating"
-                }
-                onClick={generate}
-              >
-                生成建议
-              </button>
-              <p className="disclosure">
-                文稿和检索资料将发送至配置的模型服务。建议需确认后写入。
-              </p>
-              {proposal && (
-                <article className="proposal">
-                  <div className="proposal-title">
-                    修改预览{" "}
-                    <span>
-                      {
-                        (
-                          {
-                            generating: "生成中",
-                            ready: "待确认",
-                            accepted: "已应用",
-                            rejected: "已拒绝",
-                            cancelled: "已取消",
-                            failed: "失败",
-                            interrupted: "服务中断",
-                          } as Record<string, string>
-                        )[proposal.state]
-                      }
-                    </span>
-                  </div>
-                  {proposal.error && <p className="error">{proposal.error}</p>}
-                  {proposal.state === "interrupted" && (
-                    <p>服务已重启，未应用修改；请重新生成。</p>
-                  )}
-                  {proposal.suggested && (
-                    <>
-                      <small>原文</small>
-                      <pre>{proposal.original || "（在文档末尾新增内容）"}</pre>
-                      <small>建议</small>
-                      <pre>{proposal.suggested}</pre>
-                      <small>差异</small>
-                      <div className="diff">
-                        {diffChars(
-                          proposal.original || "",
-                          proposal.suggested,
-                        ).map((p, i) =>
-                          p.added ? (
-                            <ins key={i}>{p.value}</ins>
-                          ) : p.removed ? (
-                            <del key={i}>{p.value}</del>
-                          ) : (
-                            <span key={i}>{p.value}</span>
-                          ),
-                        )}
-                      </div>
-                      {proposal.limitations?.map((w, i) => (
-                        <p className="warning" key={i}>
-                          {w}
-                        </p>
-                      ))}
-                      {proposal.citations?.map((c, i) => (
-                        <button
-                          className="citation"
-                          key={i}
-                          onClick={async () => {
-                            try {
-                              await openSource(c.source_id, c.chunk_id);
-                            } catch (e) {
-                              fail(e);
-                            }
-                          }}
-                        >
-                          {c.name} · v{c.version.slice(0, 8)} · #{c.ordinal}
-                          <q>{c.quote}</q>
-                        </button>
-                      ))}
-                      {proposal.usage && (
-                        <details className="model-usage">
-                          <summary>调用用量</summary>
-                          <small>
-                            输入 {proposal.usage.prompt_tokens ?? "未返回"} ·
-                            输出 {proposal.usage.completion_tokens ?? "未返回"}{" "}
-                            token
-                          </small>
-                        </details>
-                      )}
-                    </>
-                  )}
-                  {proposal.state === "ready" && (
-                    <div className="proposal-actions">
-                      <button className="primary" onClick={accept}>
-                        确认应用
-                      </button>
-                      <button onClick={reject}>拒绝</button>
-                    </div>
-                  )}
-                  {proposal.state === "generating" && (
-                    <button onClick={reject}>取消生成</button>
-                  )}
-                  {proposal.state === "accepted" && (
-                    <button
-                      onClick={() => {
-                        if (
-                          queue.current!.dirty ||
-                          queue.current!.base.revision !==
-                            proposal.base_revision + 1
-                        ) {
-                          setError(
-                            "AI 应用后存在新的修改，请在版本历史中核对后恢复，避免覆盖新内容",
-                          );
-                          return;
-                        }
-                        api<any[]>(`/documents/${current.id}/history`)
-                          .then((rows) => {
-                            const before = rows.find(
-                              (r) => r.revision === proposal.base_revision,
-                            );
-                            if (!before)
-                              throw new Error("原版本不在最近历史中");
-                            return transact([
-                              {
-                                type: "snapshot",
-                                content: before.body.content,
-                              },
-                            ]);
-                          })
-                          .then(() => setEpoch((x) => x + 1))
-                          .catch(fail);
-                      }}
-                    >
-                      恢复应用前版本（新增修订）
-                    </button>
-                  )}
-                </article>
-              )}
+          <aside
+            className="sidebar"
+            id="manuscript-pane"
+            hidden={!manuscriptsOpen}
+            aria-label="文稿管理"
+          >
+            <div className="brand">
+              <b>{view === "good-ai" ? "选择协作文稿" : "文稿管理"}</b>
+              <span className="version">{docs.length} 篇</span>
             </div>
-          )}
-          {tab === "sources" && (
-            <div className="panel-body">
-              <h2>资料与依据</h2>
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  try {
-                    setSearchResults(
-                      await api(
-                        `/documents/${current.id}/search?q=${encodeURIComponent(searchQuery)}`,
-                      ),
-                    );
-                  } catch (e) {
-                    fail(e);
-                  }
-                }}
+            <button className="primary new-doc" onClick={create}>
+              新建文稿
+            </button>
+            <div className="sidebar-actions">
+              <button
+                className="template-entry"
+                onClick={() => setPicking(true)}
               >
-                <label>
-                  检索资料
-                  <input
-                    aria-label="检索资料"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </label>
-                <button>检索</button>
-              </form>
-              {searchResults.map((s) => (
-                <button
-                  key={s.id}
-                  className="citation"
-                  onClick={() => openSource(s.source_id, s.id)}
-                >
-                  {s.name} · 片段 #{s.ordinal}
-                  <q>{s.text}</q>
-                  <span>打开此片段</span>
-                </button>
-              ))}
-              <p className="muted">
-                上传后可检索并查看原文。支持 TXT、Markdown、DOCX 和文渊 JSON。
-              </p>
+                从模板创建
+              </button>
               <label className="import-button">
-                上传资料
+                导入文档
                 <input
-                  aria-label="上传资料"
+                  aria-label="导入文档"
                   type="file"
-                  accept=".txt,.md,.docx,.json"
+                  accept=".md,.txt,.json,.docx"
                   disabled={busy}
                   onChange={(e) => {
-                    upload(e.target.files?.[0], true);
+                    upload(e.target.files?.[0]);
                     e.target.value = "";
                   }}
                 />
               </label>
-              {sources.map((s) => (
-                <article className="source-card" key={s.id}>
-                  <b>{s.name}</b>
-                  <small>v{s.version.slice(0, 12)}</small>
-                  <button
-                    onClick={async () => {
-                      try {
-                        setSourceText(
-                          await api(`/documents/${current.id}/sources/${s.id}`),
-                        );
-                      } catch (e) {
-                        fail(e);
-                      }
-                    }}
-                  >
-                    查看片段/原件
-                  </button>
-                  <button
-                    onClick={async () => {
-                      try {
-                        await api(
-                          `/documents/${current.id}/sources/${s.id}`,
-                          undefined,
-                          "DELETE",
-                        );
-                        setSources(
-                          await api(`/documents/${current.id}/sources`),
-                        );
-                        setSourceText(null);
-                      } catch (e) {
-                        fail(e);
-                      }
-                    }}
-                  >
-                    删除资料
-                  </button>
-                  {s.warnings.map((w) => (
-                    <small key={w}>{w}</small>
-                  ))}
-                </article>
+            </div>
+            <div className="section-label">
+              文稿 <span>{docs.length}</span>
+            </div>
+            <nav className="doc-list" aria-label="我的文稿">
+              {docs.map((d) => (
+                <button
+                  key={d.id}
+                  className={
+                    current?.id === d.id ? "doc-item active" : "doc-item"
+                  }
+                  aria-current={current?.id === d.id ? "page" : undefined}
+                  onClick={() => openDoc(d.id)}
+                >
+                  <div>
+                    <b>{d.title}</b>
+                    <small>
+                      r{d.revision} ·{" "}
+                      {new Date(d.updated).toLocaleDateString("zh-CN")}
+                    </small>
+                  </div>
+                </button>
               ))}
-              {!sources.length && (
-                <p className="muted">暂无参考资料。上传后可在写作时引用。</p>
-              )}
-              {sourceText && (
-                <article>
-                  <h3>{sourceText.name}</h3>
-                  <button
-                    onClick={() => download(sourceText.name, sourceText.data)}
-                  >
-                    下载原件
-                  </button>
-                  {sourceText.chunks.map((c: any) => (
-                    <div
-                      key={c.id}
-                      id={`source-chunk-${c.id}`}
-                      className={
-                        sourceText.focused_chunk_id === c.id
-                          ? "chunk focused"
-                          : "chunk"
-                      }
+            </nav>
+            {content && (
+              <div className="outline">
+                <div className="section-label">文章大纲</div>
+                {outline(content).length ? (
+                  outline(content).map((h) => (
+                    <button
+                      key={h.id}
+                      style={{ paddingLeft: 12 + (h.level - 1) * 10 }}
+                      onClick={() => editor.current?.focusNode(h.id)}
                     >
-                      <small>
-                        片段 #{c.ordinal} · {c.id.slice(0, 8)}
-                      </small>
-                      <p>{c.text}</p>
-                    </div>
+                      {h.title || "未命名标题"}
+                    </button>
+                  ))
+                ) : (
+                  <p>应用标题样式后自动生成</p>
+                )}
+              </div>
+            )}
+            <footer>
+              <span>正文自动保存 · 原生 JSON</span>
+            </footer>
+          </aside>
+          <section className="workspace">
+            {process.env.NEXT_PUBLIC_WENYUAN_DEMO_MODEL === "simulated" && (
+              <div className="demo-disclosure">
+                合成资料演示 · 模拟模型（不作为真实模型验收）
+              </div>
+            )}
+            <header className="workspace-header">
+              <div className="workspace-location">
+                <PaneToggle
+                  side="left"
+                  expanded={manuscriptsOpen}
+                  onClick={() => setManuscriptsOpen(!manuscriptsOpen)}
+                />
+                <div className="breadcrumb">
+                  工作台 <span>/</span> {current ? "正文编辑" : "文稿"}
+                </div>
+              </div>
+              <div className="header-actions">
+                {current && (
+                  <>
+                    <span
+                      className={
+                        queue.current?.error
+                          ? "save-state failed"
+                          : "save-state"
+                      }
+                      aria-live="polite"
+                    >
+                      {status}
+                    </span>
+                    <button onClick={() => save().catch(() => {})}>保存</button>
+                    <button onClick={() => setPreview(true)}>分页预览</button>
+                    <button
+                      onClick={() => exportFile("docx")}
+                      className="primary"
+                    >
+                      导出 DOCX
+                    </button>
+                    <button aria-label="文档设置" onClick={openSettings}>
+                      设置
+                    </button>
+                  </>
+                )}
+                {current && (
+                  <PaneToggle
+                    side="right"
+                    expanded={assistantOpen}
+                    onClick={() => setAssistantOpen(!assistantOpen)}
+                  />
+                )}
+              </div>
+            </header>
+            {error && (
+              <div role="alert" className="error banner">
+                <span>{error}</span>
+                {queue.current?.blocked && (
+                  <button onClick={forkRecovery}>另存本地恢复稿</button>
+                )}
+                <button onClick={() => setError("")}>关闭提示</button>
+              </div>
+            )}
+            {warnings.length > 0 && (
+              <div className="warning banner">
+                <div>
+                  {warnings.map((w, i) => (
+                    <p key={i}>{w}</p>
                   ))}
-                </article>
-              )}
-            </div>
-          )}
-          {tab === "history" && (
-            <div className="panel-body">
-              <h2>版本与操作记录</h2>
-              <p className="muted">恢复后另存为新版本，原有记录保留。</p>
-              {history.map((h) => (
-                <article className="history-card" key={h.revision}>
-                  <b>修订 r{h.revision}</b>
-                  <small>{new Date(h.created).toLocaleString("zh-CN")}</small>
-                  <p>{textOf(h.body.content).slice(0, 100) || "空白文档"}</p>
-                  <button
-                    onClick={() =>
-                      transact([
-                        { type: "snapshot", content: h.body.content },
-                        {
-                          type: "metadata",
-                          title: h.body.title,
-                          layout: h.body.layout,
-                          template_id: h.body.template_id ?? null,
-                        },
-                      ])
-                        .then(() => setEpoch((x) => x + 1))
-                        .catch(fail)
-                    }
-                  >
-                    恢复此版本
-                  </button>
-                </article>
-              ))}
-              <h3>最近操作</h3>
-              {records.map((r) => (
-                <p key={r.id} className="operation">
-                  <code>{r.id.slice(0, 12)}</code> · {r.state}
+                </div>
+                <button onClick={() => setWarnings([])}>收起</button>
+              </div>
+            )}
+            {current && content ? (
+              <>
+                <div className="document-heading">
+                  <input
+                    aria-label="文章标题"
+                    key={`${current.id}:${current.title}`}
+                    defaultValue={current.title}
+                    onBlur={(e) => {
+                      if (e.target.value !== queue.current!.base.title)
+                        transact([
+                          { type: "metadata", title: e.target.value },
+                        ]).catch(fail);
+                    }}
+                  />
+                  <div>
+                    <span>第 {current.revision} 版</span>
+                    <span>{textOf(content).length.toLocaleString()} 字符</span>
+                  </div>
+                </div>
+                <div className="editor-scroll">
+                  <Editor
+                    key={`${current.id}:${epoch}`}
+                    ref={editor}
+                    content={content}
+                    layout={current.layout}
+                    onChange={change}
+                    onSelection={setSelection}
+                    onError={setError}
+                  />
+                </div>
+                <footer className="editor-footer">
+                  <span>修改自动保存 · Ctrl/⌘ Z 撤销</span>
+                  <span>{sources.length} 份参考资料</span>
+                </footer>
+              </>
+            ) : (
+              <div className="empty">
+                <h1>
+                  {view === "good-ai"
+                    ? "选择文稿，与 Good AI 协同写作"
+                    : docs.length
+                      ? "未打开文稿"
+                      : "开始写作"}
+                </h1>
+                <p>
+                  {docs.length
+                    ? "从左侧打开一篇文稿，或创建新文稿。"
+                    : "创建空白文稿，也可以从模板开始。"}
                 </p>
-              ))}
-            </div>
+                <div className="empty-actions">
+                  <button className="primary" onClick={create}>
+                    创建空白文稿
+                  </button>
+                  <button onClick={() => setPicking(true)}>使用模板</button>
+                </div>
+                <small>可导入 DOCX、Markdown、TXT 或文渊 JSON 文件。</small>
+              </div>
+            )}
+          </section>
+          {current && (
+            <aside
+              className="right-panel"
+              id="assistant-pane"
+              hidden={!assistantOpen}
+              aria-label="写作与资料"
+            >
+              <nav className="panel-tabs" aria-label="文稿辅助工具">
+                <button
+                  className={tab === "ai" ? "active" : ""}
+                  aria-current={tab === "ai" ? "page" : undefined}
+                  onClick={() => setTab("ai")}
+                >
+                  写作助手
+                </button>
+                <button
+                  className={tab === "sources" ? "active" : ""}
+                  aria-current={tab === "sources" ? "page" : undefined}
+                  onClick={() => setTab("sources")}
+                >
+                  资料
+                </button>
+                <button
+                  className={tab === "history" ? "active" : ""}
+                  aria-current={tab === "history" ? "page" : undefined}
+                  onClick={showHistory}
+                >
+                  历史
+                </button>
+                <button
+                  className={tab === "checks" ? "active" : ""}
+                  aria-current={tab === "checks" ? "page" : undefined}
+                  onClick={() => setTab("checks")}
+                >
+                  检查
+                </button>
+              </nav>
+              {tab === "ai" && (
+                <div className="panel-body">
+                  <div className="assistant-intro">
+                    <div className="assistant-heading">
+                      <h2>Good AI · 文稿协作</h2>
+                    </div>
+                    <p>结果先预览，确认后写入正文。</p>
+                  </div>
+                  <div className="assistant-target">
+                    <small>本次写作目标 · 第 {current.revision} 版</small>
+                    <b>{current.title}</b>
+                    <small>
+                      {sources.length} 份参考资料
+                      {selection
+                        ? ` · 已锁定 ${Array.from(selection.text).length} 字符`
+                        : " · 当前未选择文字"}
+                    </small>
+                    <button
+                      className="text-button"
+                      onClick={() => navigate("knowledge")}
+                    >
+                      从知识库添加资料 →
+                    </button>
+                    {view === "good-ai" && (
+                      <button
+                        className="text-button"
+                        onClick={() => navigate("writer")}
+                      >
+                        返回正文选取文字 →
+                      </button>
+                    )}
+                  </div>
+                  <label>
+                    写作任务
+                    <select
+                      value={action}
+                      onChange={(e) => setAction(e.target.value)}
+                    >
+                      {actions.map(([v, t]) => (
+                        <option key={v} value={v}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>具体要求</span>
+                    <textarea
+                      aria-label="写作要求"
+                      placeholder="说明要写什么、参考哪些资料，或如何修改选中文字。"
+                      value={instruction}
+                      onChange={(e) => setInstruction(e.target.value)}
+                    />
+                  </label>
+                  {selection && (
+                    <div className="selection-card">
+                      <small>
+                        锁定选区 · {Array.from(selection.text).length} 字符
+                      </small>
+                      <p>{selection.text}</p>
+                    </div>
+                  )}
+                  <button
+                    className="inspect-input"
+                    onClick={inspectInput}
+                    disabled={!instruction.trim()}
+                  >
+                    查看发送内容
+                  </button>
+                  {inputContext && (
+                    <WritingContext
+                      context={inputContext}
+                      onSource={openSource}
+                    />
+                  )}
+                  <button
+                    className="primary"
+                    disabled={
+                      !instruction.trim() || proposal?.state === "generating"
+                    }
+                    onClick={generate}
+                  >
+                    生成建议
+                  </button>
+                  <p className="disclosure">
+                    文稿和检索资料将发送至配置的模型服务。建议需确认后写入。
+                  </p>
+                  {proposal && (
+                    <article className="proposal">
+                      <div className="proposal-title">
+                        修改预览{" "}
+                        <span>
+                          {
+                            (
+                              {
+                                generating: "生成中",
+                                ready: "待确认",
+                                accepted: "已应用",
+                                rejected: "已拒绝",
+                                cancelled: "已取消",
+                                failed: "失败",
+                                interrupted: "服务中断",
+                              } as Record<string, string>
+                            )[proposal.state]
+                          }
+                        </span>
+                      </div>
+                      {proposal.error && (
+                        <p className="error">{proposal.error}</p>
+                      )}
+                      {proposal.state === "interrupted" && (
+                        <p>服务已重启，未应用修改；请重新生成。</p>
+                      )}
+                      {proposal.suggested && (
+                        <>
+                          <small>原文</small>
+                          <pre>
+                            {proposal.original || "（在文档末尾新增内容）"}
+                          </pre>
+                          <small>建议</small>
+                          <pre>{proposal.suggested}</pre>
+                          <small>差异</small>
+                          <div className="diff">
+                            {diffChars(
+                              proposal.original || "",
+                              proposal.suggested,
+                            ).map((p, i) =>
+                              p.added ? (
+                                <ins key={i}>{p.value}</ins>
+                              ) : p.removed ? (
+                                <del key={i}>{p.value}</del>
+                              ) : (
+                                <span key={i}>{p.value}</span>
+                              ),
+                            )}
+                          </div>
+                          {proposal.limitations?.map((w, i) => (
+                            <p className="warning" key={i}>
+                              {w}
+                            </p>
+                          ))}
+                          {proposal.citations?.map((c, i) => (
+                            <button
+                              className="citation"
+                              key={i}
+                              onClick={async () => {
+                                try {
+                                  await openSource(c.source_id, c.chunk_id);
+                                } catch (e) {
+                                  fail(e);
+                                }
+                              }}
+                            >
+                              {c.name} · v{c.version.slice(0, 8)} · #{c.ordinal}
+                              <q>{c.quote}</q>
+                            </button>
+                          ))}
+                          {proposal.usage && (
+                            <details className="model-usage">
+                              <summary>调用用量</summary>
+                              <small>
+                                输入 {proposal.usage.prompt_tokens ?? "未返回"}{" "}
+                                · 输出{" "}
+                                {proposal.usage.completion_tokens ?? "未返回"}{" "}
+                                token
+                              </small>
+                            </details>
+                          )}
+                        </>
+                      )}
+                      {proposal.state === "ready" && (
+                        <div className="proposal-actions">
+                          <button className="primary" onClick={accept}>
+                            确认应用
+                          </button>
+                          <button onClick={reject}>拒绝</button>
+                        </div>
+                      )}
+                      {proposal.state === "generating" && (
+                        <button onClick={reject}>取消生成</button>
+                      )}
+                      {proposal.state === "accepted" && (
+                        <button
+                          onClick={() => {
+                            if (
+                              queue.current!.dirty ||
+                              queue.current!.base.revision !==
+                                proposal.base_revision + 1
+                            ) {
+                              setError(
+                                "AI 应用后存在新的修改，请在版本历史中核对后恢复，避免覆盖新内容",
+                              );
+                              return;
+                            }
+                            api<any[]>(`/documents/${current.id}/history`)
+                              .then((rows) => {
+                                const before = rows.find(
+                                  (r) => r.revision === proposal.base_revision,
+                                );
+                                if (!before)
+                                  throw new Error("原版本不在最近历史中");
+                                return transact([
+                                  {
+                                    type: "snapshot",
+                                    content: before.body.content,
+                                  },
+                                ]);
+                              })
+                              .then(() => setEpoch((x) => x + 1))
+                              .catch(fail);
+                          }}
+                        >
+                          恢复应用前版本（新增修订）
+                        </button>
+                      )}
+                    </article>
+                  )}
+                </div>
+              )}
+              {tab === "sources" && (
+                <div className="panel-body">
+                  <h2>资料与依据</h2>
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      try {
+                        setSearchResults(
+                          await api(
+                            `/documents/${current.id}/search?q=${encodeURIComponent(searchQuery)}`,
+                          ),
+                        );
+                      } catch (e) {
+                        fail(e);
+                      }
+                    }}
+                  >
+                    <label>
+                      检索资料
+                      <input
+                        aria-label="检索资料"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </label>
+                    <button>检索</button>
+                  </form>
+                  {searchResults.map((s) => (
+                    <button
+                      key={s.id}
+                      className="citation"
+                      onClick={() => openSource(s.source_id, s.id)}
+                    >
+                      {s.name} · 片段 #{s.ordinal}
+                      <q>{s.text}</q>
+                      <span>打开此片段</span>
+                    </button>
+                  ))}
+                  <p className="muted">
+                    上传后可检索并查看原文。支持 TXT、Markdown、DOCX 和文渊
+                    JSON。
+                  </p>
+                  <label className="import-button">
+                    上传资料
+                    <input
+                      aria-label="上传资料"
+                      type="file"
+                      accept=".txt,.md,.docx,.json"
+                      disabled={busy}
+                      onChange={(e) => {
+                        upload(e.target.files?.[0], true);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                  {sources.map((s) => (
+                    <article className="source-card" key={s.id}>
+                      <b>{s.name}</b>
+                      <small>v{s.version.slice(0, 12)}</small>
+                      {s.origin_library && (
+                        <small>
+                          来自知识库：{s.origin_library} · 独立引用副本
+                        </small>
+                      )}
+                      <button
+                        onClick={async () => {
+                          try {
+                            setSourceText(
+                              await api(
+                                `/documents/${current.id}/sources/${s.id}`,
+                              ),
+                            );
+                          } catch (e) {
+                            fail(e);
+                          }
+                        }}
+                      >
+                        查看片段/原件
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await api(
+                              `/documents/${current.id}/sources/${s.id}`,
+                              undefined,
+                              "DELETE",
+                            );
+                            setSources(
+                              await api(`/documents/${current.id}/sources`),
+                            );
+                            setSourceText(null);
+                          } catch (e) {
+                            fail(e);
+                          }
+                        }}
+                      >
+                        删除资料
+                      </button>
+                      {s.warnings.map((w) => (
+                        <small key={w}>{w}</small>
+                      ))}
+                    </article>
+                  ))}
+                  {!sources.length && (
+                    <p className="muted">
+                      暂无参考资料。上传后可在写作时引用。
+                    </p>
+                  )}
+                  {sourceText && (
+                    <article>
+                      <h3>{sourceText.name}</h3>
+                      <button
+                        onClick={() =>
+                          download(sourceText.name, sourceText.data)
+                        }
+                      >
+                        下载原件
+                      </button>
+                      {sourceText.chunks.map((c: any) => (
+                        <div
+                          key={c.id}
+                          id={`source-chunk-${c.id}`}
+                          className={
+                            sourceText.focused_chunk_id === c.id
+                              ? "chunk focused"
+                              : "chunk"
+                          }
+                        >
+                          <small>
+                            片段 #{c.ordinal} · {c.id.slice(0, 8)}
+                          </small>
+                          <p>{c.text}</p>
+                        </div>
+                      ))}
+                    </article>
+                  )}
+                </div>
+              )}
+              {tab === "history" && (
+                <div className="panel-body">
+                  <h2>版本与操作记录</h2>
+                  <p className="muted">恢复后另存为新版本，原有记录保留。</p>
+                  {history.map((h) => (
+                    <article className="history-card" key={h.revision}>
+                      <b>修订 r{h.revision}</b>
+                      <small>
+                        {new Date(h.created).toLocaleString("zh-CN")}
+                      </small>
+                      <p>
+                        {textOf(h.body.content).slice(0, 100) || "空白文档"}
+                      </p>
+                      <button
+                        onClick={() =>
+                          transact([
+                            { type: "snapshot", content: h.body.content },
+                            {
+                              type: "metadata",
+                              title: h.body.title,
+                              layout: h.body.layout,
+                              template_id: h.body.template_id ?? null,
+                            },
+                          ])
+                            .then(() => setEpoch((x) => x + 1))
+                            .catch(fail)
+                        }
+                      >
+                        恢复此版本
+                      </button>
+                    </article>
+                  ))}
+                  <h3>最近操作</h3>
+                  {records.map((r) => (
+                    <p key={r.id} className="operation">
+                      <code>{r.id.slice(0, 12)}</code> · {r.state}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {tab === "checks" && (
+                <ChecksPanel
+                  key={current.id}
+                  document={current}
+                  onSave={async () => {
+                    await save();
+                    return queue.current!.base;
+                  }}
+                  onLocate={(id) => editor.current?.focusNode(id)}
+                  onError={fail}
+                />
+              )}
+            </aside>
           )}
-          {tab === "checks" && (
-            <ChecksPanel
-              key={current.id}
-              document={current}
-              onSave={async () => {
-                await save();
-                return queue.current!.base;
-              }}
-              onLocate={(id) => editor.current?.focusNode(id)}
-              onError={fail}
-            />
-          )}
-        </aside>
-      )}
+        </div>
+        {view === "templates" && (
+          <TemplateLibrary key={user} onUse={useTemplate} />
+        )}
+        {view === "knowledge" && (
+          <KnowledgePage
+            key={user}
+            documents={docs}
+            current={current}
+            onDocument={openDoc}
+            onWrite={() => navigate("writer")}
+            onAttach={async (libraryId, sourceId) => {
+              const target = currentRef.current;
+              if (!target) throw new Error("请先选择目标文稿");
+              await api(`/libraries/${libraryId}/sources/${sourceId}/attach`, {
+                document_id: target.id,
+              });
+              if (currentRef.current?.id === target.id)
+                setSources(await api(`/documents/${target.id}/sources`));
+            }}
+          />
+        )}
+      </section>
       {preview && current && content && (
         <PagePreview
           content={content}
