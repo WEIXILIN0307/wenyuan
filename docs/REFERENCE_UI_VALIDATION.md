@@ -60,7 +60,8 @@ API 8118 / 生产前端 3118，使用本次新建隔离账号和人工合成资�
 
 本地媒体位于忽略路径 `demo-materials/`，实际存储在
 `/data03/songbinbin/envs/wenyuan-local/media/demo-materials`；前版归档为 `before-layout-alignment`。
-本轮新视频、截图和 DOCX/PDF 均未上传 GitHub 或第三方。旧 GUI 截图单独标为历史记录，
+本轮验证完成时媒体保存在本地；后经维护者明确授权，视频已上传至
+[GitHub 演示发布页](https://github.com/WEIXILIN0307/wenyuan/releases/tag/demo-2026-10-31)，截图和 DOCX/PDF 继续本地交付。旧 GUI 截图单独标为历史记录，
 不计入本轮 Office 图形界面人工验收。未验证 Word/WPS、真实系统输入法、七种写作操作
 的全部真实质量，也未声称已由维护者用播放器完整观看视频。
 

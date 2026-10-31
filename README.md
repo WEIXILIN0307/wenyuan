@@ -118,9 +118,10 @@ pnpm build
 
 复现步骤见 [演示说明](docs/DEMO.md)，测试与兼容结果见 [种子计划验证](docs/SEED_VALIDATION.md)
 及 [界面整理记录](docs/UI_POLISH_VALIDATION.md)、[工作台调整验证](docs/WORKSPACE_REFERENCE_VALIDATION.md)。
-本地 `demo-materials/wenyuan-demo.mp4` 为约 2 分 31 秒真实模型演示；
-`demo-materials/` 另有实际运行截图、DOCX 与 LibreOffice 对照 PDF。按维护者要求不推送
-媒体。申请表及个人联系方式仅保存在本地忽略目录，未提交申请、未创建 GitLink 镜像。
+观看或下载[演示视频（2分31秒）](https://github.com/WEIXILIN0307/wenyuan/releases/download/demo-2026-10-31/wenyuan-demo.mp4)，也可访问[演示发布页](https://github.com/WEIXILIN0307/wenyuan/releases/tag/demo-2026-10-31)。
+视频展示真实浏览器、本地模型和合成资料的完整写作流程。
+本地 `demo-materials/` 另有实际运行截图、DOCX 与 LibreOffice 对照 PDF。
+申请表及个人联系方式仅保存在本地，未提交申请、未创建 GitLink 镜像。
 项目目前由 1 人维护，无已核实外部用户与商业收入，不以合成案例代替实际用户。
 
 四界面的参考范围、增量存储和能力边界见 [实现对照](docs/PRODUCT_SURFACES.md)。
